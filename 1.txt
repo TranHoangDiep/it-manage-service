@@ -1,0 +1,290 @@
+Bạn là một Senior Fullstack Engineer + DevOps Architect.
+Nhiệm vụ của bạn là thiết kế và build một hệ thống ITSM Report Dashboard hoàn chỉnh
+dùng cho hệ thống ITSM (ví dụ: ManageEngine ServiceDesk Plus).
+
+Hệ thống dùng để:
+- Báo cáo tổng quan ITSM
+- Báo cáo chi tiết theo Khách hàng (Customer)
+- Báo cáo chi tiết theo Engineer / Technician
+- Đánh giá SLA, DFOS, workload, hiệu suất nhân sự
+
+=====================
+1. KIẾN TRÚC TỔNG THỂ
+=====================
+
+Frontend (React)
+  |
+  | REST API
+  v
+Backend (Flask API)
+  |
+  v
+Database (PostgreSQL / SQLite / Mock data)
+
+- Backend và Frontend tách rời
+- Backend có service layer để sau này thay mock data bằng ITSM API thật
+- Code clean, dễ mở rộng, production-ready
+
+=====================
+2. BACKEND – FLASK API
+=====================
+
+Tech stack:
+- Python 3.10+
+- Flask
+- Flask-CORS
+- SQLAlchemy (hoặc mock data)
+- requests
+
+Cấu trúc project:
+backend/
+ ├── app.py
+ ├── config.py
+ ├── routes/
+ │    ├── dashboard.py
+ │    ├── customers.py
+ │    └── engineers.py
+ ├── services/
+ │    └── itsm_service.py
+ └── models/
+      ├── ticket.py
+      ├── customer.py
+      └── engineer.py
+
+---------------------
+2.1 SLA / DFOS CONFIG
+---------------------
+
+config.py:
+- SLA_RESPONSE_MINUTES = 30
+- SLA_RESOLVE_HOURS = 4
+- OVERLOAD_TICKETS_PER_DAY = 15
+
+DFOS (%) =
+(Number of tickets met SLA / Total tickets) * 100
+
+SLA breached nếu:
+- response_time_minutes > SLA_RESPONSE_MINUTES
+HOẶC
+- resolve_time_hours > SLA_RESOLVE_HOURS
+
+=====================
+3. DASHBOARD APIs
+=====================
+
+GET /api/report/summary
+GET /api/report/tickets-by-status
+GET /api/report/tickets-by-priority
+GET /api/report/trend
+GET /api/report/technicians
+GET /api/report/monitoring
+
+Dashboard summary response:
+{
+  "total": 1250,
+  "open": 120,
+  "in_progress": 300,
+  "resolved": 700,
+  "sla_breached": 130,
+  "avg_mttr_hours": 3.5
+}
+
+=====================
+4. CUSTOMER REPORT APIs
+=====================
+
+Ticket model cần có:
+- customer_id
+- customer_name
+- engineer_id
+- engineer_name
+- sla_status
+- response_time_minutes
+- resolve_time_hours
+
+---------------------
+4.1 Customer list
+---------------------
+GET /api/report/customers
+
+Response:
+[
+  {
+    "customer_id": "C001",
+    "customer_name": "ABC Manufacturing",
+    "total_tickets": 320,
+    "open": 25,
+    "closed": 280,
+    "sla_breached": 15,
+    "sla_percent": 95.3,
+    "avg_resolve_hours": 3.8
+  }
+]
+
+---------------------
+4.2 Customer detail
+---------------------
+GET /api/report/customers/{customer_id}
+
+Response:
+{
+  "summary": {
+    "total": 320,
+    "open": 25,
+    "closed": 280,
+    "sla_breached": 15,
+    "sla_percent": 95.3
+  },
+  "technicians": [
+    {
+      "name": "Nguyen Van A",
+      "handled": 120,
+      "sla_breached": 3,
+      "avg_resolve_hours": 3.1
+    }
+  ],
+  "sla_breakdown": {
+    "met": 305,
+"breached": 15
+  },
+  "trend": []
+}
+
+---------------------
+4.3 Customer tickets
+---------------------
+GET /api/report/customers/{customer_id}/tickets
+
+=====================
+5. ENGINEER REPORT APIs
+=====================
+
+Engineer fields:
+- engineer_id
+- engineer_name
+- group
+- level (L1/L2/L3)
+- shift
+
+---------------------
+5.1 Engineer list
+---------------------
+GET /api/report/engineers
+
+Response:
+[
+  {
+    "engineer_id": "E001",
+    "engineer_name": "Nguyen Van A",
+    "group": "Infra",
+    "level": "L2",
+    "total_tickets": 420,
+    "sla_percent": 94.0,
+    "customers_supported": 12
+  }
+]
+
+---------------------
+5.2 Engineer detail
+---------------------
+GET /api/report/engineers/{engineer_id}
+
+Response:
+{
+  "summary": {
+    "total": 420,
+    "open": 35,
+    "closed": 360,
+    "sla_percent": 94.0
+  },
+  "workload": {
+    "tickets_per_day": 14,
+    "overload": false
+  },
+  "customers": [
+    {
+      "customer_name": "ABC Manufacturing",
+      "handled": 120,
+      "sla_breached": 6
+    }
+  ],
+  "priority_distribution": [],
+  "trend": []
+}
+
+---------------------
+5.3 Engineer tickets
+---------------------
+GET /api/report/engineers/{engineer_id}/tickets
+
+=====================
+6. FRONTEND – REACT
+=====================
+
+Tech:
+- React (Vite)
+- Axios
+- TailwindCSS hoặc Windmill UI
+- Recharts
+- TanStack Table
+
+Pages:
+- /dashboard
+- /customers
+- /customers/:id
+- /engineers
+- /engineers/:id
+
+---------------------
+6.1 Dashboard UI
+---------------------
+- KPI Cards
+- Line chart: Ticket trend
+- Donut chart: Status
+- Bar chart: Priority
+- Technician table
+- Monitoring table
+
+---------------------
+6.2 Customer UI
+---------------------
+Customer list table
+Customer detail page:
+- KPI
+- SLA donut
+- Trend chart
+- Technician table
+- Ticket table (highlight SLA breach)
+
+---------------------
+6.3 Engineer UI
+---------------------
+Engineer list table
+Engineer detail page:
+- KPI
+- SLA donut
+- Priority bar chart
+- Customer table
+- Ticket table
+- Overload indicator (RED/YELLOW/GREEN)
+
+=====================
+7. BONUS (OPTIONAL)
+=====================
+- Export PDF / Excel
+- Dark / Light mode
+- AI analysis:
+  - Customer nào tốn effort nhất
+  - Engineer nào overload
+  - Đề xuất staffing
+
+=====================
+8. OUTPUT MONG MUỐN
+=====================
+- Backend Flask API đầy đủ code
+- Frontend React đầy đủ component
+- Mock data để demo
+- Hướng dẫn run local
+- Code chia file rõ ràng, có comment
+
+Hãy build từng phần một cách chi tiết.
