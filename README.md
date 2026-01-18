@@ -143,4 +143,4 @@ itsm_report/
 
 ## 📄 License
 
-MIT License - CMC Telecom Services © 2026
+MIT License - CMC TS © 2026
