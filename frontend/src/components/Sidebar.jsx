@@ -1,93 +1,211 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
-    LayoutDashboard, Users, HardHat, ShieldCheck, Home, UserCircle,
-    FolderKanban, BookUser, AlertTriangle, Database, LogOut, Crown
+    LayoutDashboard, Users, HardHat, ShieldCheck, Home, Network, Server,
+    FolderKanban, BookUser, AlertTriangle, Building2, Wrench, UserCircle,
+    ChevronDown, ChevronRight, Phone, BarChart3, Activity, TrendingUp,
+    Clock, Shield, Cloud, Database, Link2, MapPin, RefreshCw, Calendar
 } from 'lucide-react';
 
 const Sidebar = () => {
-    const { user, logout, isLeader } = useAuth();
-    const navigate = useNavigate();
+    const location = useLocation();
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
+    // Track open submenus
+    const [openMenus, setOpenMenus] = useState({
+        dashboards: location.pathname.startsWith('/dashboard'),
+        customers: location.pathname.startsWith('/customers'),
+        services: location.pathname.startsWith('/services'),
+        alarms: location.pathname.startsWith('/alarms'),
+        cmdb: location.pathname.startsWith('/cmdb'),
+        projects: location.pathname.startsWith('/projects'),
+        people: location.pathname.startsWith('/people'),
+        contacts: location.pathname.startsWith('/contacts'),
+    });
+
+    const toggleMenu = (menu) => {
+        setOpenMenus(prev => ({ ...prev, [menu]: !prev[menu] }));
     };
 
-    // Base nav items for everyone
-    const navItems = [
-        { to: '/', icon: <Home size={20} />, label: 'Home' },
-        { to: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-        { to: '/alarms', icon: <AlertTriangle size={20} />, label: 'Alarms' },
-        { to: '/cmdb', icon: <Database size={20} />, label: 'CMDB', leaderOnly: true },
-        { to: '/projects', icon: <FolderKanban size={20} />, label: 'Projects' },
-        { to: '/members', icon: <UserCircle size={20} />, label: 'Members', leaderOnly: true },
-        { to: '/customers/contacts', icon: <BookUser size={20} />, label: 'Contacts' },
-        { to: '/customers', icon: <Users size={20} />, label: 'Customers' },
-        { to: '/engineers', icon: <HardHat size={20} />, label: 'Engineers' },
-    ];
+    const MenuItem = ({ to, icon, label, end = false }) => (
+        <NavLink
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${isActive
+                    ? 'bg-primary-50 text-primary-700 font-semibold'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                }`
+            }
+        >
+            {icon}
+            <span className="text-sm">{label}</span>
+        </NavLink>
+    );
 
-    // Filter items based on role
-    const filteredNavItems = navItems.filter(item => !item.leaderOnly || isLeader);
+    const SubMenuItem = ({ to, label, end = false }) => (
+        <NavLink
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+                `block px-3 py-2 rounded-lg text-sm transition-all ${isActive
+                    ? 'bg-primary-100 text-primary-700 font-semibold'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`
+            }
+        >
+            {label}
+        </NavLink>
+    );
+
+    const MenuGroup = ({ title, icon, menuKey, children, isActive }) => (
+        <div>
+            <button
+                onClick={() => toggleMenu(menuKey)}
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all ${isActive
+                        ? 'bg-primary-50 text-primary-700 font-semibold'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                    }`}
+            >
+                <div className="flex items-center gap-3">
+                    {icon}
+                    <span className="text-sm">{title}</span>
+                </div>
+                {openMenus[menuKey] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            {openMenus[menuKey] && (
+                <div className="ml-7 mt-1 space-y-0.5 border-l-2 border-slate-100 pl-3">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className="w-64 bg-white border-r border-slate-200 h-screen flex flex-col fixed left-0 top-0">
             {/* Logo */}
-            <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-                <div className="bg-primary-600 p-2 rounded-lg text-white">
-                    <ShieldCheck size={24} />
+            <div className="p-5 border-b border-slate-100 flex items-center gap-3">
+                <div className="bg-gradient-to-br from-violet-600 to-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-violet-500/20">
+                    <ShieldCheck size={22} />
                 </div>
-                <span className="font-bold text-xl text-slate-800 tracking-tight">ITSM Report</span>
+                <div>
+                    <span className="font-black text-lg text-slate-800 tracking-tight block">CMC OpsCenter</span>
+                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">IT Operations</span>
+                </div>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-2 mt-4 overflow-y-auto">
-                {filteredNavItems.map((item) => (
-                    <NavLink
-                        key={item.to}
-                        to={item.to}
-                        className={({ isActive }) =>
-                            `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
-                                ? 'bg-primary-50 text-primary-700 font-semibold border border-primary-100/50 shadow-sm shadow-primary-100'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                            }`
-                        }
-                    >
-                        {item.icon}
-                        <span>{item.label}</span>
-                    </NavLink>
-                ))}
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+                {/* Home */}
+                <MenuItem to="/" icon={<Home size={18} />} label="Home" end />
+
+                {/* Dashboards */}
+                <MenuGroup
+                    title="Dashboards"
+                    icon={<LayoutDashboard size={18} />}
+                    menuKey="dashboards"
+                    isActive={location.pathname.startsWith('/dashboard')}
+                >
+                    <SubMenuItem to="/dashboard" label="Executive Overview" end />
+                    <SubMenuItem to="/dashboard/noc" label="NOC Overview" />
+                    <SubMenuItem to="/dashboard/sla" label="SLA & KPI" />
+                    <SubMenuItem to="/dashboard/capacity" label="Capacity & Trend" />
+                </MenuGroup>
+
+                {/* Customers */}
+                <MenuGroup
+                    title="Customers"
+                    icon={<Building2 size={18} />}
+                    menuKey="customers"
+                    isActive={location.pathname.startsWith('/customers')}
+                >
+                    <SubMenuItem to="/customers" label="All Customers" end />
+                    <SubMenuItem to="/customers/services" label="Services" />
+                    <SubMenuItem to="/customers/reports" label="Reports" />
+                </MenuGroup>
+
+                {/* Services */}
+                <MenuGroup
+                    title="Services"
+                    icon={<Wrench size={18} />}
+                    menuKey="services"
+                    isActive={location.pathname.startsWith('/services')}
+                >
+                    <SubMenuItem to="/services/monitoring" label="Monitoring" />
+                    <SubMenuItem to="/services/backup" label="Backup" />
+                    <SubMenuItem to="/services/security" label="Security" />
+                    <SubMenuItem to="/services/cloud" label="Cloud / Infra" />
+                </MenuGroup>
+
+                {/* Alarms */}
+                <MenuGroup
+                    title="Alarms"
+                    icon={<AlertTriangle size={18} />}
+                    menuKey="alarms"
+                    isActive={location.pathname.startsWith('/alarms')}
+                >
+                    <SubMenuItem to="/alarms" label="Active Alarms" end />
+                    <SubMenuItem to="/alarms/history" label="Alarm History" />
+                    <SubMenuItem to="/alarms/correlation" label="Correlation" />
+                    <SubMenuItem to="/alarms/rules" label="Auto-Ticket Rules" />
+                </MenuGroup>
+
+                {/* CMDB */}
+                <MenuGroup
+                    title="CMDB"
+                    icon={<Database size={18} />}
+                    menuKey="cmdb"
+                    isActive={location.pathname.startsWith('/cmdb')}
+                >
+                    <SubMenuItem to="/cmdb" label="Assets" end />
+                    <SubMenuItem to="/cmdb/network" label="Network" />
+                    <SubMenuItem to="/cmdb/relationships" label="Relationships" />
+                    <SubMenuItem to="/cmdb/locations" label="Locations" />
+                    <SubMenuItem to="/cmdb/lifecycle" label="Lifecycle" />
+                </MenuGroup>
+
+                {/* Projects */}
+                <MenuGroup
+                    title="Projects"
+                    icon={<FolderKanban size={18} />}
+                    menuKey="projects"
+                    isActive={location.pathname.startsWith('/projects')}
+                >
+                    <SubMenuItem to="/projects" label="Ongoing" end />
+                    <SubMenuItem to="/projects/completed" label="Completed" />
+                    <SubMenuItem to="/projects/changes" label="Change / Upgrade" />
+                </MenuGroup>
+
+                {/* People */}
+                <MenuGroup
+                    title="People"
+                    icon={<UserCircle size={18} />}
+                    menuKey="people"
+                    isActive={location.pathname.startsWith('/people')}
+                >
+                    <SubMenuItem to="/people/engineers" label="Engineers" />
+                    <SubMenuItem to="/people/schedule" label="On-duty Schedule" />
+                    <SubMenuItem to="/people/skills" label="Skill Matrix" />
+                </MenuGroup>
+
+                {/* Contacts */}
+                <MenuGroup
+                    title="Contacts"
+                    icon={<Phone size={18} />}
+                    menuKey="contacts"
+                    isActive={location.pathname.startsWith('/contacts')}
+                >
+                    <SubMenuItem to="/contacts/customers" label="Customer Contacts" />
+                    <SubMenuItem to="/contacts/vendors" label="Vendors" />
+                    <SubMenuItem to="/contacts/emergency" label="Emergency" />
+                </MenuGroup>
             </nav>
 
-            {/* User Profile & Logout */}
-            <div className="p-4 border-t border-slate-100 space-y-3">
-                {/* User Info */}
-                <div className="bg-slate-50 rounded-2xl p-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold ${isLeader ? 'bg-gradient-to-br from-violet-500 to-purple-600' : 'bg-gradient-to-br from-cyan-500 to-blue-600'}`}>
-                            {user?.full_name?.charAt(0) || 'U'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-800 text-sm truncate">{user?.full_name}</p>
-                            <div className="flex items-center gap-1">
-                                {isLeader && <Crown size={12} className="text-amber-500" />}
-                                <p className={`text-xs font-bold uppercase tracking-wider ${isLeader ? 'text-violet-600' : 'text-cyan-600'}`}>
-                                    {user?.role}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            {/* Footer */}
+            <div className="p-3 border-t border-slate-100">
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-slate-400 font-medium">CMC OpsCenter v2.0</p>
+                    <p className="text-[10px] text-slate-300">© 2026 CMC Telecom</p>
                 </div>
-
-                {/* Logout Button */}
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl transition-colors"
-                >
-                    <LogOut size={18} />
-                    <span>Đăng xuất</span>
-                </button>
             </div>
         </div>
     );

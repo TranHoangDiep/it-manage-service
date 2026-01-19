@@ -1,61 +1,89 @@
-# ITSM Report Dashboard
+# CMC OpsCenter - IT Operations Management Platform
 
-Hệ thống quản lý và giám sát dịch vụ CNTT toàn diện cho doanh nghiệp.
+<div align="center">
 
-## 🚀 Features
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Python](https://img.shields.io/badge/python-3.11+-yellow.svg)
+![React](https://img.shields.io/badge/react-18-blue.svg)
 
-- **Dashboard** - Tổng quan ticket, SLA, top customers
-- **CMDB** - Quản lý tài sản ảo hóa (vCenter, Host, VM)
-- **Alarm Notes** - Ghi chú và theo dõi cảnh báo hạ tầng
-- **Projects** - Quản lý dự án và team allocation
-- **Members** - Quản lý thành viên và phân quyền
-- **Contacts** - Danh bạ liên hệ khách hàng
-- **Authentication** - JWT với phân quyền Leader/Member
+**Nền tảng quản lý vận hành CNTT toàn diện cho Managed Service Providers (MSP)**
 
-## 📋 Tech Stack
+</div>
 
-**Backend:**
-- Python 3.11+
-- Flask
-- Flask-SQLAlchemy
-- PostgreSQL
-- JWT Authentication
+---
 
-**Frontend:**
-- React 18
-- Vite
-- Tailwind CSS
-- Recharts
-- Lucide React Icons
+## 🎯 Overview
 
-## 🛠️ Installation
+CMC OpsCenter là nền tảng IT Operations Management được thiết kế cho các nhà cung cấp dịch vụ quản lý (MSP), tích hợp CMDB, Alarm Management, SLA Tracking, và Customer Portal vào một hệ thống thống nhất.
+
+### Tính năng chính
+
+| Module | Mô tả |
+|--------|-------|
+| **Dashboards** | Executive, NOC, SLA/KPI, Capacity views |
+| **CMDB** | Quản lý tài sản (VM, Network, Relationships) |
+| **Alarms** | Real-time monitoring, correlation, auto-ticketing |
+| **Services** | Service catalog với subscription tracking |
+| **Customers** | Multi-tenant customer portal |
+| **Projects** | Project & change management |
+| **People** | Engineers, schedules, skill matrix |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Frontend (React + Vite)                  │
+├─────────────────────────────────────────────────────────────┤
+│                     Backend (Flask API)                      │
+├─────────────┬─────────────┬─────────────┬──────────────────┤
+│   CMDB      │   Alarms    │   Services  │   Integration    │
+│   Service   │   Service   │   Catalog   │   Layer          │
+├─────────────┴─────────────┴─────────────┴──────────────────┤
+│                   PostgreSQL Database                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.11+
 - Node.js 18+
 - PostgreSQL 14+
 
-### Backend Setup
+### 1. Clone & Setup
+
+```bash
+git clone <repository-url>
+cd itsm_report
+```
+
+### 2. Backend
 
 ```bash
 cd backend
 
-# Create virtual environment
+# Virtual environment
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure database
-export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/itsm_report"
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
 
-# Run server
+# Run
 python app.py
 ```
 
-### Frontend Setup
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -67,21 +95,16 @@ npm install
 npm run dev
 ```
 
-### Create Demo Accounts
+### 4. Access
 
-```bash
-# Leader account
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"leader@demo.vn","password":"123456","full_name":"Nguyen Leader","role":"leader"}'
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:5000 |
 
-# Member account
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"member@demo.vn","password":"123456","full_name":"Tran Member","role":"member"}'
-```
+---
 
-## 🐳 Docker
+## 🐳 Docker Deployment
 
 ### Quick Start
 
@@ -89,58 +112,160 @@ curl -X POST http://localhost:5000/api/auth/register \
 docker-compose up -d
 ```
 
-Access:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-
-### Build Images
+### Production Build
 
 ```bash
-# Backend
-docker build -t itsm-backend ./backend
+# Build images
+docker-compose build
 
-# Frontend
-docker build -t itsm-frontend ./frontend
+# Run with environment variables
+docker-compose up -d
 ```
+
+### Access (Docker)
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5000 |
+
+---
 
 ## 📁 Project Structure
 
 ```
 itsm_report/
 ├── backend/
-│   ├── models/          # Database models
-│   ├── services/        # Business logic
-│   ├── app.py           # Flask application
-│   └── config.py        # Configuration
+│   ├── models/
+│   │   ├── cmdb.py        # CI, Relationships, Services, SLA, Alarms
+│   │   ├── people.py      # Engineers, Contacts, Projects
+│   │   └── ticket.py      # ITSM Tickets
+│   ├── routes/
+│   │   └── cmdb_routes.py # CMDB API endpoints
+│   ├── services/
+│   │   └── itsm_service.py
+│   ├── app.py             # Flask application
+│   └── config.py          # Configuration
+│
 ├── frontend/
 │   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── contexts/    # Auth context
-│   │   ├── pages/       # Page components
-│   │   └── services/    # API client
+│   │   ├── components/    # Sidebar, Layout
+│   │   ├── pages/         # Dashboard, CMDB, Alarms...
+│   │   └── services/      # API client
 │   └── package.json
+│
 └── docker-compose.yml
 ```
 
-## 🔐 Role Permissions
+---
 
-| Feature | Leader | Member |
-|---------|:------:|:------:|
-| View Dashboard | ✅ | ✅ |
-| Manage Members | ✅ | ❌ |
-| Manage CMDB | ✅ | ❌ |
-| View Projects | ✅ | ✅ |
-| View Alarms | ✅ | ✅ |
+## 🗄️ Data Models
 
-## 📝 Environment Variables
+### CMDB Core
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection | `postgresql://postgres:postgres@localhost:5432/itsm_report` |
-| `JWT_SECRET_KEY` | JWT signing key | Auto-generated |
-| `SDP_API_KEY` | ManageEngine API key | - |
-| `SDP_BASE_URL` | ManageEngine URL | - |
+| Model | Purpose |
+|-------|---------|
+| `CI` | Configuration Items (VM, Host, Network devices) |
+| `CIRelationship` | Dependencies between CIs |
+| `Location` | Physical locations (DC, Rack) |
+| `Service` | Service catalog items |
+| `CustomerService` | Customer subscriptions |
+| `SLA` | SLA definitions |
+| `Alarm` | Monitoring alerts |
+| `AlarmRule` | Auto-ticketing rules |
+
+### People & Operations
+
+| Model | Purpose |
+|-------|---------|
+| `Engineer` | NOC/MSP staff |
+| `EngineerSkill` | Skills & certifications |
+| `OnDutySchedule` | Shift schedules |
+| `Contact` | Customer/Vendor contacts |
+| `Project` | Projects & changes |
+
+---
+
+## 🔌 API Endpoints
+
+### CMDB
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cmdb/assets` | List all CIs |
+| GET | `/api/cmdb/assets/:id` | Get CI with relationships |
+| POST | `/api/cmdb/assets` | Create CI |
+| PUT | `/api/cmdb/assets/:id` | Update CI |
+| DELETE | `/api/cmdb/assets/:id` | Delete CI |
+| GET | `/api/cmdb/relationships` | List relationships |
+| GET | `/api/cmdb/services` | Service catalog |
+| GET | `/api/cmdb/slas` | SLA definitions |
+| GET | `/api/cmdb/stats` | CMDB statistics |
+
+### Dashboard
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard/summary` | Dashboard overview |
+| GET | `/api/customers` | Customer list |
+| GET | `/api/engineers` | Engineer list |
+
+---
+
+## ⚙️ Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | ✅ |
+| `JWT_SECRET_KEY` | JWT signing key | ✅ |
+| `SDP_API_KEY` | ManageEngine ServiceDesk Plus API key | Optional |
+| `SDP_BASE_URL` | ManageEngine URL | Optional |
+
+---
+
+## 🔄 Integration
+
+### Prometheus/Alertmanager
+
+```yaml
+# alertmanager.yml
+receivers:
+  - name: 'opscenter'
+    webhook_configs:
+      - url: 'http://opscenter:5000/api/webhooks/alertmanager'
+```
+
+### ServiceDesk Plus
+
+Configure in `.env`:
+```
+SDP_API_KEY=your-api-key
+SDP_BASE_URL=https://your-sdp.com
+```
+
+---
+
+## 📊 Dashboards
+
+| Dashboard | Audience | Key Widgets |
+|-----------|----------|-------------|
+| Executive | Management | Customer health, SLA trends |
+| NOC | L1/L2 Engineers | Active alarms, on-duty roster |
+| SLA & KPI | Service Managers | SLA compliance, MTTR, MTTA |
+| Capacity | Capacity Planners | Resource utilization |
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Prometheus webhook integration
+- [ ] Auto-ticket creation from alarms
+- [ ] Customer self-service portal
+- [ ] AI-powered alarm correlation
+- [ ] Mobile responsive design
+
+---
 
 ## 📄 License
 
-MIT License - CMC TS © 2026
+MIT License - CMC Telecom Services © 2026

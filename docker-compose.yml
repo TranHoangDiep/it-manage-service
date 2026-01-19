@@ -29,6 +29,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/itsm_report
       JWT_SECRET_KEY: itsm-jwt-super-secret-key-2026
       FLASK_ENV: production
+      SDP_API_KEY: ${SDP_API_KEY}
+      SDP_BASE_URL: ${SDP_BASE_URL}
     ports:
       - "5000:5000"
     depends_on:
