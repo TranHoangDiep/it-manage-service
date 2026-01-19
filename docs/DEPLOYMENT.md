@@ -96,7 +96,7 @@ npm install
 npm run dev
 ```
 
-Frontend chạy tại: `http://localhost:5173`
+Frontend chạy tại: `http://localhost:3000`
 
 ### 2.4 Database Setup
 
