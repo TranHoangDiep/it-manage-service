@@ -5,7 +5,7 @@ db = SQLAlchemy()
 
 class Ticket(db.Model):
     __tablename__ = 'tickets'
-    id = db.Column(db.String(20), primary_key=True)
+    id = db.Column(db.String(100), primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     customer_id = db.Column(db.String(50), index=True)
     customer_name = db.Column(db.String(255))
