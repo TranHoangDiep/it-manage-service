@@ -34,5 +34,5 @@ class Config:
     USE_MOCK_DATA = False # Set to False to use real ManageEngine API
     
     # ManageEngine ServiceDesk Plus
-    SDP_API_KEY = os.environ.get('SDP_API_KEY', 'B767E9C0-F823-4960-A104-A2D39F30C767')
-    SDP_BASE_URL = os.environ.get('SDP_BASE_URL', 'https://itsm.cmcts.com.vn/api/v3')
+    SDP_API_KEY = os.environ.get('SDP_API_KEY')
+    SDP_BASE_URL = os.environ.get('SDP_BASE_URL')
