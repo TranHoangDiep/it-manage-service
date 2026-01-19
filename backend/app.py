@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_migrate import Migrate
 from models.ticket import db
 from models.member import Member
 from models.user import User
@@ -16,6 +17,9 @@ CORS(app)
 
 # Initialize DB
 db.init_app(app)
+
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
 
 with app.app_context():
     db.create_all()
