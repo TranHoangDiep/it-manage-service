@@ -18,6 +18,7 @@ class Ticket(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     response_time_minutes = db.Column(db.Integer)
     resolve_time_hours = db.Column(db.Float)
+    time_elapsed_minutes = db.Column(db.Integer)  # Actual workload time from ITSM
     
     @property
     def sla_status(self):
@@ -42,6 +43,8 @@ class Ticket(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "response_time_minutes": self.response_time_minutes,
             "resolve_time_hours": self.resolve_time_hours,
+            "time_elapsed_minutes": self.time_elapsed_minutes,
+            "time_elapsed_hours": round(self.time_elapsed_minutes / 60, 2) if self.time_elapsed_minutes else None,
             "sla_status": self.sla_status
         }
 

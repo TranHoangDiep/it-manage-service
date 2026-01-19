@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { itsmService } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { ArrowLeft, Ticket, AlertCircle, CheckCircle2, Target } from 'lucide-react';
+import { ArrowLeft, Ticket, AlertCircle, CheckCircle2, Target, X, Maximize2, Minimize2, Clock } from 'lucide-react';
 
 const TicketModal = ({ ticket, onClose }) => {
     const [detail, setDetail] = useState(ticket);
     const [loading, setLoading] = useState(false);
+    const [modalSize, setModalSize] = useState('medium'); // small, medium, large, full
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (ticket && (!ticket.description || ticket.description === "No description provided.")) {
@@ -22,27 +24,82 @@ const TicketModal = ({ ticket, onClose }) => {
 
     if (!ticket) return null;
 
+    const sizeClasses = {
+        small: 'max-w-md',
+        medium: 'max-w-2xl',
+        large: 'max-w-4xl',
+        full: 'max-w-6xl'
+    };
+
+    const handleBack = () => {
+        onClose();
+        navigate(-1);
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
-                <div className="p-8 border-b border-slate-100 flex justify-between items-start">
-                    <div>
-                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border mb-3 inline-block ${ticket.priority === 'Critical' ? 'bg-red-50 text-red-600 border-red-100' :
-                            ticket.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                                'bg-blue-50 text-blue-600 border-blue-100'
-                            }`}>
-                            {ticket.priority} Priority
-                        </span>
-                        <h2 className="text-2xl font-black text-slate-800 leading-tight">#{ticket.ticket_id}: {ticket.title}</h2>
+            <div
+                className={`bg-white rounded-[2rem] w-full ${sizeClasses[modalSize]} shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]`}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header with controls */}
+                <div className="p-6 border-b border-slate-100 flex justify-between items-start shrink-0">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleBack}
+                            className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500 hover:text-primary-600"
+                            title="Quay lại"
+                        >
+                            <ArrowLeft size={20} />
+                        </button>
+                        <div>
+                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border mb-2 inline-block ${ticket.priority === 'Critical' ? 'bg-red-50 text-red-600 border-red-100' :
+                                ticket.priority === 'High' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                    'bg-blue-50 text-blue-600 border-blue-100'
+                                }`}>
+                                {ticket.priority} Priority
+                            </span>
+                            <h2 className="text-xl font-black text-slate-800 leading-tight">#{ticket.ticket_id}: {ticket.title}</h2>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">
-                        <AlertCircle size={24} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Size toggle buttons */}
+                        <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+                            <button
+                                onClick={() => setModalSize('small')}
+                                className={`px-2 py-1 rounded text-xs font-bold transition-colors ${modalSize === 'small' ? 'bg-white shadow text-primary-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                title="Nhỏ"
+                            >S</button>
+                            <button
+                                onClick={() => setModalSize('medium')}
+                                className={`px-2 py-1 rounded text-xs font-bold transition-colors ${modalSize === 'medium' ? 'bg-white shadow text-primary-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                title="Vừa"
+                            >M</button>
+                            <button
+                                onClick={() => setModalSize('large')}
+                                className={`px-2 py-1 rounded text-xs font-bold transition-colors ${modalSize === 'large' ? 'bg-white shadow text-primary-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                title="Lớn"
+                            >L</button>
+                            <button
+                                onClick={() => setModalSize('full')}
+                                className={`px-2 py-1 rounded text-xs font-bold transition-colors ${modalSize === 'full' ? 'bg-white shadow text-primary-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                title="Full"
+                            >
+                                <Maximize2 size={14} />
+                            </button>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-red-50 rounded-xl transition-colors text-slate-400 hover:text-red-500" title="Đóng">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
-                <div className="p-8 space-y-6">
+
+                {/* Scrollable content area */}
+                <div className="p-6 space-y-6 overflow-y-auto overflow-x-auto flex-1 custom-scrollbar">
+                    {/* Ticket Content */}
                     <div>
                         <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Ticket Content</h4>
-                        <div className="bg-slate-50 p-6 rounded-3xl text-slate-700 leading-relaxed font-medium min-h-[100px] flex items-center justify-center">
+                        <div className="bg-slate-50 p-6 rounded-2xl text-slate-700 leading-relaxed font-medium min-h-[100px] overflow-x-auto">
                             {loading ? (
                                 <div className="animate-pulse flex items-center gap-2 text-primary-600">
                                     <div className="w-2 h-2 bg-primary-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
@@ -52,16 +109,18 @@ const TicketModal = ({ ticket, onClose }) => {
                                 </div>
                             ) : (
                                 <div
-                                    className="prose prose-slate max-w-none w-full break-words"
+                                    className="prose prose-slate max-w-none w-full break-words whitespace-pre-wrap"
                                     dangerouslySetInnerHTML={{ __html: detail?.description || "No content provided for this ticket." }}
                                 />
                             )}
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-slate-50 p-4 rounded-2xl">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Technician</p>
-                            <p className="font-bold text-slate-800">{ticket.engineer_name}</p>
+                            <p className="font-bold text-slate-800 text-sm">{ticket.engineer_name}</p>
                         </div>
                         <div className="bg-slate-50 p-4 rounded-2xl">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">SLA Status</p>
@@ -69,11 +128,31 @@ const TicketModal = ({ ticket, onClose }) => {
                                 {ticket.sla_status}
                             </span>
                         </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                            <p className="font-bold text-slate-800 text-sm">{ticket.status}</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                <Clock size={10} /> Time Spent
+                            </p>
+                            <p className="font-bold text-slate-800 text-sm">
+                                {ticket.time_elapsed_hours ? `${ticket.time_elapsed_hours}h` : 'N/A'}
+                            </p>
+                        </div>
                     </div>
                 </div>
-                <div className="p-8 bg-slate-50 flex justify-end">
-                    <button onClick={onClose} className="px-8 py-3 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-lg">
-                        Close Detail
+
+                {/* Footer with actions */}
+                <div className="p-6 bg-slate-50 flex justify-between shrink-0 border-t border-slate-100">
+                    <button
+                        onClick={handleBack}
+                        className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-all flex items-center gap-2"
+                    >
+                        <ArrowLeft size={16} /> Quay lại
+                    </button>
+                    <button onClick={onClose} className="px-8 py-3 bg-slate-900 text-white font-black rounded-xl hover:bg-slate-800 transition-all shadow-lg">
+                        Đóng
                     </button>
                 </div>
             </div>

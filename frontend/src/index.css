@@ -16,3 +16,48 @@
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
+
+/* Custom Scrollbar - Always Visible */
+.custom-scrollbar {
+  overflow: scroll !important;
+  /* Force scroll to always show */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 8px;
+  margin: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+  border-radius: 8px;
+  border: 3px solid #e2e8f0;
+  min-height: 40px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #e2e8f0;
+  border-radius: 8px;
+}
+
+/* Ensure scrollbars are always visible */
+.scroll-visible {
+  scrollbar-width: auto;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+/* Modal scrollbar */
+.modal-scroll {
+  overflow-x: scroll;
+  overflow-y: scroll;
+}

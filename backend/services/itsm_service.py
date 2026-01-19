@@ -263,25 +263,54 @@ class ITSMService:
     def get_ticket_detail(self, ticket_id, app):
         import requests
         ticket = Ticket.query.get(ticket_id)
-        if not ticket: return None
+        if not ticket: 
+            return None
         
         # Try to fetch real description from SDP if available
-        api_key = app.config['SDP_API_KEY']
-        base_url = app.config['SDP_BASE_URL']
-        if api_key and base_url:
+        api_key = app.config.get('SDP_API_KEY')
+        base_url = app.config.get('SDP_BASE_URL')
+        
+        if api_key and base_url and api_key != 'YOUR_SDP_API_KEY_HERE':
             headers = {
                 "authtoken": api_key,
                 "Accept": "application/vnd.manageengine.sdp.v3+json"
             }
             try:
                 url = f"{base_url}/requests/{ticket_id}"
-                r = requests.get(url, headers=headers, timeout=5)
+                print(f"Fetching ticket detail from: {url}")
+                r = requests.get(url, headers=headers, timeout=10)
+                
                 if r.status_code == 200:
                     sdp_data = r.json().get('request', {})
-                    if 'description' in sdp_data:
-                        ticket.description = sdp_data['description']
+                    
+                    # Get description - ManageEngine stores content in different places
+                    # Priority: resolution.content > description > short_description
+                    description = None
+                    
+                    # Check resolution.content first (main content field)
+                    resolution = sdp_data.get('resolution', {})
+                    if resolution and isinstance(resolution, dict):
+                        description = resolution.get('content')
+                    
+                    # Fallback to description field
+                    if not description:
+                        description = sdp_data.get('description')
+                    
+                    # Fallback to short_description
+                    if not description:
+                        description = sdp_data.get('short_description')
+                    
+                    if description:
+                        ticket.description = description
                         db.session.commit()
-            except:
-                pass
+                        print(f"Updated ticket {ticket_id} with description length: {len(description)}")
+                else:
+                    print(f"Failed to fetch ticket {ticket_id}: HTTP {r.status_code}")
+                    
+            except requests.exceptions.Timeout:
+                print(f"Timeout fetching ticket {ticket_id}")
+            except Exception as e:
+                print(f"Error fetching ticket {ticket_id}: {e}")
                 
         return ticket.to_dict()
+

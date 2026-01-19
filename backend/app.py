@@ -5,6 +5,8 @@ from models.ticket import db
 from models.member import Member
 from models.user import User
 from models.modules import Project, ProjectMember, CustomerContact, Contact, AlarmNote, CMDBAsset
+from models.alarm import AlarmNote as AlarmNoteV2, AlarmHistory
+from routes.alarm_routes import alarm_bp
 from services.itsm_service import ITSMService
 from services.auth_service import create_access_token, login_required, leader_required
 from services.sync_worker import sync_data
@@ -14,6 +16,9 @@ import threading
 app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
+
+# Register Blueprints
+app.register_blueprint(alarm_bp)
 
 # Initialize DB
 db.init_app(app)
