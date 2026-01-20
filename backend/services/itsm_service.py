@@ -10,9 +10,9 @@ class ITSMService:
         in_progress = db.session.query(func.count(Ticket.id)).filter(Ticket.status == 'In Progress').scalar() or 0
         resolved = db.session.query(func.count(Ticket.id)).filter(Ticket.status.in_(['Resolved', 'Closed'])).scalar() or 0
         
-        # SLA Calculation via SQL (Response > 30 OR Resolve > 4)
+        # SLA Calculation via is_overdue from ManageEngine
         sla_breached = db.session.query(func.count(Ticket.id)).filter(
-            (Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4)
+            Ticket.is_overdue == True
         ).scalar() or 0
         
         avg_mttr = db.session.query(func.avg(Ticket.resolve_time_hours)).filter(
@@ -35,8 +35,7 @@ class ITSMService:
             sla_met = db.session.query(func.count(Ticket.id)).filter(
                 Ticket.created_at >= start_dt,
                 Ticket.created_at <= end_dt,
-                Ticket.response_time_minutes <= 30,
-                (Ticket.resolve_time_hours <= 4) | (Ticket.resolve_time_hours.is_(None))
+                Ticket.is_overdue == False
             ).scalar() or 0
             
             trend.append({
@@ -59,7 +58,7 @@ class ITSMService:
             func.count(Ticket.id).label('total'),
             func.sum(db.case((Ticket.status == 'Open', 1), else_=0)).label('open'),
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached'),
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached'),
             func.avg(Ticket.resolve_time_hours).label('avg_mttr')
         ).group_by(Ticket.engineer_name).order_by(func.count(Ticket.id).desc()).limit(10).all()
 
@@ -74,14 +73,14 @@ class ITSMService:
             Ticket.customer_id,
             Ticket.customer_name.label('name'),
             func.count(Ticket.id).label('total'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached')
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
         ).group_by(Ticket.customer_id, Ticket.customer_name).order_by(func.count(Ticket.id).desc()).limit(10).all()
 
         # Priority SLA Breakdown
         priority_sla_raw = db.session.query(
             Ticket.priority,
             func.count(Ticket.id).label('total'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached')
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
         ).group_by(Ticket.priority).all()
 
         return {
@@ -126,7 +125,7 @@ class ITSMService:
             func.count(Ticket.id).label('total'),
             func.sum(db.case((Ticket.status == 'Open', 1), else_=0)).label('open'),
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached'),
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached'),
             func.avg(Ticket.resolve_time_hours).label('avg_reso')
         ).group_by(Ticket.customer_id, Ticket.customer_name).all()
         
@@ -148,7 +147,7 @@ class ITSMService:
             Engineer.group,
             Engineer.level,
             func.count(Ticket.id).label('total'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached'),
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached'),
             func.count(db.distinct(Ticket.customer_id)).label('cust_count')
         ).join(Ticket, Engineer.id == Ticket.engineer_id, isouter=True)\
          .group_by(Engineer.id).all()
@@ -169,7 +168,7 @@ class ITSMService:
             func.count(Ticket.id).label('total'),
             func.sum(db.case((Ticket.status == 'Open', 1), else_=0)).label('open'),
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached')
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
         ).filter(Ticket.customer_id == customer_id).first()
         
         # Get customer name
@@ -182,7 +181,7 @@ class ITSMService:
         techs = db.session.query(
             Ticket.engineer_name.label('name'),
             func.count(Ticket.id).label('handled'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached'),
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached'),
             func.avg(Ticket.resolve_time_hours).label('avg_reso')
         ).filter(Ticket.customer_id == customer_id).group_by(Ticket.engineer_name).all()
         
@@ -216,7 +215,7 @@ class ITSMService:
             func.count(Ticket.id).label('total'),
             func.sum(db.case((Ticket.status == 'Open', 1), else_=0)).label('open'),
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached')
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
         ).filter(Ticket.engineer_id == engineer_id).first()
         
         priority_dist = db.session.query(
@@ -227,7 +226,7 @@ class ITSMService:
         cust_breakdown = db.session.query(
             Ticket.customer_name,
             func.count(Ticket.id).label('handled'),
-            func.sum(db.case(((Ticket.response_time_minutes > 30) | (Ticket.resolve_time_hours > 4), 1), else_=0)).label('breached')
+            func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
         ).filter(Ticket.engineer_id == engineer_id).group_by(Ticket.customer_name).all()
         
         total_tickets = summary.total or 0
@@ -256,9 +255,135 @@ class ITSMService:
         tickets = Ticket.query.filter_by(customer_id=customer_id).limit(100).all()
         return [t.to_dict() for t in tickets]
 
+    def get_customer_performance(self, customer_id, period='30d'):
+        """
+        Get customer performance statistics with time filter.
+        Period: 1d (24h), 7d (week), 30d (month)
+        """
+        from datetime import datetime, timedelta
+        
+        # Calculate date filter
+        now = datetime.now()
+        if period == '1d':
+            start_date = now - timedelta(days=1)
+        elif period == '7d':
+            start_date = now - timedelta(days=7)
+        else:  # 30d default
+            start_date = now - timedelta(days=30)
+        
+        # Base query with date filter
+        base_query = Ticket.query.filter(
+            Ticket.customer_id == customer_id,
+            Ticket.created_at >= start_date
+        )
+        
+        # Get customer info
+        cust = db.session.query(Ticket.customer_name).filter(
+            Ticket.customer_id == customer_id
+        ).first()
+        cust_name = cust.customer_name if cust else "Unknown"
+        
+        # Total tickets
+        total_tickets = base_query.count()
+        
+        # SLA Met (is_overdue = False)
+        sla_met = base_query.filter(Ticket.is_overdue == False).count()
+        
+        # SLA Breached (is_overdue = True)
+        sla_breached = base_query.filter(Ticket.is_overdue == True).count()
+        
+        # Status breakdown
+        open_count = base_query.filter(Ticket.status == 'Open').count()
+        in_progress = base_query.filter(Ticket.status == 'In Progress').count()
+        resolved = base_query.filter(Ticket.status.in_(['Resolved', 'Closed'])).count()
+        
+        # Calculate SLA percentage
+        sla_percent = round((sla_met / total_tickets) * 100, 1) if total_tickets > 0 else 100
+        
+        return {
+            "customer_id": customer_id,
+            "customer_name": cust_name,
+            "period": period,
+            "period_start": start_date.isoformat(),
+            "period_end": now.isoformat(),
+            "metrics": {
+                "total_tickets": total_tickets,
+                "sla_met": sla_met,
+                "sla_breached": sla_breached,
+                "sla_percent": sla_percent,
+                "status_breakdown": {
+                    "open": open_count,
+                    "in_progress": in_progress,
+                    "resolved": resolved
+                }
+            }
+        }
+
     def get_engineer_tickets(self, engineer_id):
         tickets = Ticket.query.filter_by(engineer_id=engineer_id).limit(100).all()
         return [t.to_dict() for t in tickets]
+
+    def get_engineer_performance(self, engineer_id, period='30d'):
+        """
+        Get engineer performance statistics with time filter.
+        Period: 1d (24h), 7d (week), 30d (month)
+        """
+        from datetime import datetime, timedelta
+        
+        # Calculate date filter
+        now = datetime.now()
+        if period == '1d':
+            start_date = now - timedelta(days=1)
+        elif period == '7d':
+            start_date = now - timedelta(days=7)
+        else:  # 30d default
+            start_date = now - timedelta(days=30)
+        
+        # Base query with date filter
+        base_query = Ticket.query.filter(
+            Ticket.engineer_id == engineer_id,
+            Ticket.created_at >= start_date
+        )
+        
+        # Get engineer info
+        eng = Engineer.query.get(engineer_id)
+        eng_name = eng.name if eng else "Unknown"
+        
+        # Total tickets
+        total_tickets = base_query.count()
+        
+        # SLA Met (is_overdue = False)
+        sla_met = base_query.filter(Ticket.is_overdue == False).count()
+        
+        # SLA Breached (is_overdue = True)
+        sla_breached = base_query.filter(Ticket.is_overdue == True).count()
+        
+        # Status breakdown
+        open_count = base_query.filter(Ticket.status == 'Open').count()
+        in_progress = base_query.filter(Ticket.status == 'In Progress').count()
+        resolved = base_query.filter(Ticket.status.in_(['Resolved', 'Closed'])).count()
+        
+        # Calculate SLA percentage
+        sla_percent = round((sla_met / total_tickets) * 100, 1) if total_tickets > 0 else 100
+        
+        return {
+            "engineer_id": engineer_id,
+            "engineer_name": eng_name,
+            "period": period,
+            "period_start": start_date.isoformat(),
+            "period_end": now.isoformat(),
+            "metrics": {
+                "total_tickets": total_tickets,
+                "sla_met": sla_met,
+                "sla_breached": sla_breached,
+                "sla_percent": sla_percent,
+                "status_breakdown": {
+                    "open": open_count,
+                    "in_progress": in_progress,
+                    "resolved": resolved
+                }
+            }
+        }
 
     def get_ticket_detail(self, ticket_id, app):
         import requests

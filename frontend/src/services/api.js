@@ -34,9 +34,11 @@ export const itsmService = {
   getCustomers: () => api.get('/report/customers').then(res => res.data),
   getCustomerDetail: (id) => api.get(`/report/customers/${id}`).then(res => res.data),
   getCustomerTickets: (id) => api.get(`/report/customers/${id}/tickets`).then(res => res.data),
+  getCustomerPerformance: (id, period = '30d') => api.get(`/report/customers/${id}/performance?period=${period}`).then(res => res.data),
   getEngineers: () => api.get('/report/engineers').then(res => res.data),
   getEngineerDetail: (id) => api.get(`/report/engineers/${id}`).then(res => res.data),
   getEngineerTickets: (id) => api.get(`/report/engineers/${id}/tickets`).then(res => res.data),
+  getEngineerPerformance: (id, period = '30d') => api.get(`/report/engineers/${id}/performance?period=${period}`).then(res => res.data),
   getTicketDetail: (id) => api.get(`/report/tickets/${id}`).then(res => res.data),
 };
 

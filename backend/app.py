@@ -214,6 +214,16 @@ def get_customer_detail(customer_id):
 def get_customer_tickets(customer_id):
     return jsonify(itsm_service.get_customer_tickets(customer_id))
 
+@app.route('/api/report/customers/<customer_id>/performance', methods=['GET'])
+def get_customer_performance(customer_id):
+    """Get customer performance metrics with time filter.
+    Query params: period = 1d | 7d | 30d (default: 30d)
+    """
+    period = request.args.get('period', '30d')
+    if period not in ['1d', '7d', '30d']:
+        period = '30d'
+    return jsonify(itsm_service.get_customer_performance(customer_id, period))
+
 # Engineer APIs
 @app.route('/api/report/engineers', methods=['GET'])
 def get_engineers():
@@ -229,6 +239,16 @@ def get_engineer_detail(engineer_id):
 @app.route('/api/report/engineers/<engineer_id>/tickets', methods=['GET'])
 def get_engineer_tickets(engineer_id):
     return jsonify(itsm_service.get_engineer_tickets(engineer_id))
+
+@app.route('/api/report/engineers/<engineer_id>/performance', methods=['GET'])
+def get_engineer_performance(engineer_id):
+    """Get engineer performance metrics with time filter.
+    Query params: period = 1d | 7d | 30d (default: 30d)
+    """
+    period = request.args.get('period', '30d')
+    if period not in ['1d', '7d', '30d']:
+        period = '30d'
+    return jsonify(itsm_service.get_engineer_performance(engineer_id, period))
 
 @app.route('/api/report/tickets/<ticket_id>', methods=['GET'])
 def get_ticket_detail(ticket_id):

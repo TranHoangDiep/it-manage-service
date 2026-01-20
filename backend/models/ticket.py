@@ -19,12 +19,13 @@ class Ticket(db.Model):
     response_time_minutes = db.Column(db.Integer)
     resolve_time_hours = db.Column(db.Float)
     time_elapsed_minutes = db.Column(db.Integer)  # Actual workload time from ITSM
+    is_overdue = db.Column(db.Boolean, default=False)  # SLA status from ManageEngine
     
     @property
     def sla_status(self):
-        # SLA logic: Response > 30m OR Resolve > 4h
-        if (self.response_time_minutes and self.response_time_minutes > 30) or \
-           (self.resolve_time_hours and self.resolve_time_hours > 4):
+        # Use is_overdue from ManageEngine API
+        # is_overdue: true = Breached, is_overdue: false = Met
+        if self.is_overdue:
             return "Breached"
         return "Met"
 
@@ -45,6 +46,7 @@ class Ticket(db.Model):
             "resolve_time_hours": self.resolve_time_hours,
             "time_elapsed_minutes": self.time_elapsed_minutes,
             "time_elapsed_hours": round(self.time_elapsed_minutes / 60, 2) if self.time_elapsed_minutes else None,
+            "is_overdue": self.is_overdue,
             "sla_status": self.sla_status
         }
 

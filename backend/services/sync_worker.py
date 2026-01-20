@@ -10,7 +10,7 @@ from models.ticket import db, Ticket, Customer, Engineer
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 
-def fetch_from_sdp(app, page_size=100, max_pages=5):
+def fetch_from_sdp(app, page_size=100, max_pages=20):
     """
     Fetches real ticket data from ManageEngine ServiceDesk Plus API V3.
     Supports pagination for large datasets.
@@ -101,6 +101,7 @@ def upsert_ticket(ticket_data):
             'response_time_minutes': stmt.excluded.response_time_minutes,
             'resolve_time_hours': stmt.excluded.resolve_time_hours,
             'time_elapsed_minutes': stmt.excluded.time_elapsed_minutes,
+            'is_overdue': stmt.excluded.is_overdue,
         }
     )
     db.session.execute(stmt)
@@ -193,6 +194,12 @@ def sync_tickets(app):
                     except:
                         pass
 
+                # Get is_overdue from ManageEngine (determines SLA status)
+                is_overdue = sdp_t.get('is_overdue', False)
+                # Handle case where it might be a string "true"/"false"
+                if isinstance(is_overdue, str):
+                    is_overdue = is_overdue.lower() == 'true'
+
                 ticket_data = {
                     'id': str(sdp_t.get('id')),
                     'title': sdp_t.get('subject', 'No Subject')[:500],
@@ -207,7 +214,8 @@ def sync_tickets(app):
                     'created_at': created_at,
                     'response_time_minutes': response_time,
                     'resolve_time_hours': resolve_time,
-                    'time_elapsed_minutes': time_elapsed
+                    'time_elapsed_minutes': time_elapsed,
+                    'is_overdue': is_overdue
                 }
                 
                 upsert_ticket(ticket_data)

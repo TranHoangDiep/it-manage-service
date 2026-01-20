@@ -166,17 +166,21 @@ const CustomerDetail = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedTicket, setSelectedTicket] = useState(null);
+    const [performance, setPerformance] = useState(null);
+    const [period, setPeriod] = useState('30d');
 
     useEffect(() => {
         Promise.all([
             itsmService.getCustomerDetail(id),
-            itsmService.getCustomerTickets(id)
-        ]).then(([detail, ticketList]) => {
+            itsmService.getCustomerTickets(id),
+            itsmService.getCustomerPerformance(id, period)
+        ]).then(([detail, ticketList, perfData]) => {
             setData(detail);
             setTickets(ticketList);
+            setPerformance(perfData);
             setLoading(false);
         });
-    }, [id]);
+    }, [id, period]);
 
     if (loading) return <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -248,8 +252,56 @@ const CustomerDetail = () => {
                     </div>
                 </div>
 
+                {/* Performance Metrics with Period Selector */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm lg:col-span-3">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="font-bold text-xl text-slate-800">Performance Metrics</h3>
+                        <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+                            <button
+                                onClick={() => setPeriod('1d')}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === '1d' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                24 Hours
+                            </button>
+                            <button
+                                onClick={() => setPeriod('7d')}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === '7d' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                7 Days
+                            </button>
+                            <button
+                                onClick={() => setPeriod('30d')}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${period === '30d' ? 'bg-primary-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                30 Days
+                            </button>
+                        </div>
+                    </div>
+
+                    {performance && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200">
+                                <p className="text-xs font-black text-blue-600 uppercase tracking-widest mb-2">Total Tickets</p>
+                                <p className="text-3xl font-black text-blue-900">{performance.metrics.total_tickets}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-2xl border border-emerald-200">
+                                <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-2">SLA Met</p>
+                                <p className="text-3xl font-black text-emerald-900">{performance.metrics.sla_met}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200">
+                                <p className="text-xs font-black text-red-600 uppercase tracking-widest mb-2">SLA Breached</p>
+                                <p className="text-3xl font-black text-red-900">{performance.metrics.sla_breached}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200">
+                                <p className="text-xs font-black text-purple-600 uppercase tracking-widest mb-2">SLA Rate</p>
+                                <p className="text-3xl font-black text-purple-900">{performance.metrics.sla_percent}%</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Tech Table Summary */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden lg:col-span-3">
                     <h3 className="font-bold text-xl text-slate-800 mb-6">Support Team</h3>
                     <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
                         {data.technicians.map((tech, i) => (
