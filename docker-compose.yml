@@ -1,41 +1,18 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: itsm-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: itsm_report
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - itsm-network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Flask Backend
   backend:
     build: ./backend
     container_name: itsm-backend
+    env_file:
+      - ./backend/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/itsm_report
+      DATABASE_URL: postgresql://postgres:postgres@10.222.240.12:5432/itsm_report
       JWT_SECRET_KEY: itsm-jwt-super-secret-key-2026
       FLASK_ENV: production
-      SDP_API_KEY: ${SDP_API_KEY}
-      SDP_BASE_URL: ${SDP_BASE_URL}
     ports:
-      - "5000:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "5001:5000"
     networks:
       - itsm-network
     restart: unless-stopped
@@ -51,10 +28,6 @@ services:
     networks:
       - itsm-network
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-
 
 networks:
   itsm-network:
