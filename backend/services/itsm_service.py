@@ -3,20 +3,25 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 
 class ITSMService:
-    def get_summary(self):
+    def get_summary(self, engineer_name=None):
         # High performance aggregation via SQL
-        total = db.session.query(func.count(Ticket.id)).scalar() or 0
-        open_t = db.session.query(func.count(Ticket.id)).filter(Ticket.status == 'Open').scalar() or 0
-        in_progress = db.session.query(func.count(Ticket.id)).filter(Ticket.status == 'In Progress').scalar() or 0
-        resolved = db.session.query(func.count(Ticket.id)).filter(Ticket.status.in_(['Resolved', 'Closed'])).scalar() or 0
+        # Build filters
+        base_filter = []
+        if engineer_name:
+            base_filter.append(Ticket.engineer_name == engineer_name)
+        
+        total = db.session.query(func.count(Ticket.id)).filter(*base_filter).scalar() or 0
+        open_t = db.session.query(func.count(Ticket.id)).filter(Ticket.status == 'Open', *base_filter).scalar() or 0
+        in_progress = db.session.query(func.count(Ticket.id)).filter(Ticket.status == 'In Progress', *base_filter).scalar() or 0
+        resolved = db.session.query(func.count(Ticket.id)).filter(Ticket.status.in_(['Resolved', 'Closed']), *base_filter).scalar() or 0
         
         # SLA Calculation via is_overdue from ManageEngine
         sla_breached = db.session.query(func.count(Ticket.id)).filter(
-            Ticket.is_overdue == True
+            Ticket.is_overdue == True, *base_filter
         ).scalar() or 0
         
         avg_mttr = db.session.query(func.avg(Ticket.resolve_time_hours)).filter(
-            Ticket.resolve_time_hours.isnot(None)
+            Ticket.resolve_time_hours.isnot(None), *base_filter
         ).scalar() or 0
 
         # Trend data: Last 7 days
@@ -27,14 +32,14 @@ class ITSMService:
             start_dt = datetime.combine(day, datetime.min.time())
             end_dt = datetime.combine(day, datetime.max.time())
             
+            day_filter = [Ticket.created_at >= start_dt, Ticket.created_at <= end_dt] + base_filter
+            
             count = db.session.query(func.count(Ticket.id)).filter(
-                Ticket.created_at >= start_dt,
-                Ticket.created_at <= end_dt
+                *day_filter
             ).scalar() or 0
             
             sla_met = db.session.query(func.count(Ticket.id)).filter(
-                Ticket.created_at >= start_dt,
-                Ticket.created_at <= end_dt,
+                *day_filter,
                 Ticket.is_overdue == False
             ).scalar() or 0
             
@@ -48,7 +53,7 @@ class ITSMService:
         priority_dist = db.session.query(
             Ticket.priority,
             func.count(Ticket.id).label('count')
-        ).group_by(Ticket.priority).all()
+        ).filter(*base_filter).group_by(Ticket.priority).all()
         
         priority_data = {p.priority if p.priority else 'Medium': p.count for p in priority_dist}
 
@@ -60,20 +65,24 @@ class ITSMService:
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
             func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached'),
             func.avg(Ticket.resolve_time_hours).label('avg_mttr')
-        ).group_by(Ticket.engineer_name).order_by(func.count(Ticket.id).desc()).limit(10).all()
+        ).filter(*base_filter).group_by(Ticket.engineer_name).order_by(func.count(Ticket.id).desc()).limit(10).all()
 
         # Category Distribution
         category_dist = db.session.query(
             Ticket.category,
             func.count(Ticket.id).label('count')
-        ).group_by(Ticket.category).order_by(func.count(Ticket.id).desc()).limit(10).all()
+        ).filter(*base_filter).group_by(Ticket.category).order_by(func.count(Ticket.id).desc()).limit(10).all()
 
-        # Top 10 High-Load Customers
+        # Top 10 High-Load Customers (Last 30 days + engineer filter)
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        top_customer_filter = [Ticket.created_at >= thirty_days_ago] + base_filter
         top_customers = db.session.query(
             Ticket.customer_id,
             Ticket.customer_name.label('name'),
             func.count(Ticket.id).label('total'),
             func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
+        ).filter(
+            *top_customer_filter
         ).group_by(Ticket.customer_id, Ticket.customer_name).order_by(func.count(Ticket.id).desc()).limit(10).all()
 
         # Priority SLA Breakdown
@@ -117,8 +126,22 @@ class ITSMService:
             ]
         }
 
-    def get_customers(self):
-        # Group by calculation for all customers
+    def get_customers(self, engineer_name=None, period='30d'):
+        # Group by calculation for all customers with period filter
+        # Calculate date filter based on period
+        now = datetime.now()
+        if period == '1d':
+            start_date = now - timedelta(days=1)
+        elif period == '7d':
+            start_date = now - timedelta(days=7)
+        else:  # 30d default
+            start_date = now - timedelta(days=30)
+        
+        # Build base query with filters
+        base_filter = [Ticket.created_at >= start_date]
+        if engineer_name:
+            base_filter.append(Ticket.engineer_name == engineer_name)
+        
         results = db.session.query(
             Ticket.customer_id,
             Ticket.customer_name,
@@ -127,6 +150,8 @@ class ITSMService:
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
             func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached'),
             func.avg(Ticket.resolve_time_hours).label('avg_reso')
+        ).filter(
+            *base_filter
         ).group_by(Ticket.customer_id, Ticket.customer_name).all()
         
         return [{
@@ -211,23 +236,27 @@ class ITSMService:
         eng = Engineer.query.get(engineer_id)
         if not eng: return None
         
+        # Filter by last 30 days
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        base_filter = [Ticket.engineer_id == engineer_id, Ticket.created_at >= thirty_days_ago]
+        
         summary = db.session.query(
             func.count(Ticket.id).label('total'),
             func.sum(db.case((Ticket.status == 'Open', 1), else_=0)).label('open'),
             func.sum(db.case((Ticket.status.in_(['Resolved', 'Closed']), 1), else_=0)).label('closed'),
             func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
-        ).filter(Ticket.engineer_id == engineer_id).first()
+        ).filter(*base_filter).first()
         
         priority_dist = db.session.query(
             Ticket.priority,
             func.count(Ticket.id).label('count')
-        ).filter(Ticket.engineer_id == engineer_id).group_by(Ticket.priority).all()
+        ).filter(*base_filter).group_by(Ticket.priority).all()
         
         cust_breakdown = db.session.query(
             Ticket.customer_name,
             func.count(Ticket.id).label('handled'),
             func.sum(db.case((Ticket.is_overdue == True, 1), else_=0)).label('breached')
-        ).filter(Ticket.engineer_id == engineer_id).group_by(Ticket.customer_name).all()
+        ).filter(*base_filter).group_by(Ticket.customer_name).order_by(func.count(Ticket.id).desc()).all()
         
         total_tickets = summary.total or 0
         return {

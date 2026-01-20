@@ -300,9 +300,9 @@ npm install
 
 ```bash
 # Rebuild từ đầu
-docker-compose down -v
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ---
@@ -314,4 +314,4 @@ docker-compose up -d
 
 ---
 
-*CMC Telecom Services © 2026*
+*CMC TS © 2026* made by THDIEP

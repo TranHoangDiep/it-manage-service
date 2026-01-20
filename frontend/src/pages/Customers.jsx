@@ -7,13 +7,15 @@ const Customers = () => {
     const [customers, setCustomers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState('30d');
 
     useEffect(() => {
-        itsmService.getCustomers().then(data => {
+        setLoading(true);
+        itsmService.getCustomers(period).then(data => {
             setCustomers(data);
             setLoading(false);
         });
-    }, []);
+    }, [period]);
 
     const filteredCustomers = customers.filter(c =>
         c.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,17 +33,34 @@ const Customers = () => {
                     <h1 className="text-3xl font-bold text-slate-900">Customer Portfolio</h1>
                     <p className="text-slate-500 mt-2">Manage service levels across your client base.</p>
                 </div>
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Search customer..."
-                        className="bg-white border border-slate-200 rounded-2xl px-5 py-3 pl-12 text-sm w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                <div className="flex gap-4 items-center">
+                    {/* Period Selector */}
+                    <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
+                        {['1d', '7d', '30d'].map((p) => (
+                            <button
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${period === p
+                                        ? 'bg-slate-900 text-white shadow-lg'
+                                        : 'text-slate-500 hover:text-slate-900'
+                                    }`}
+                            >
+                                {p === '1d' ? '1 Day' : p === '7d' ? '7 Days' : '30 Days'}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search customer..."
+                            className="bg-white border border-slate-200 rounded-2xl px-5 py-3 pl-12 text-sm w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
                 </div>
             </header>
 

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:5000/api',
+  baseURL: 'http://127.0.0.1:5001/api',
 });
 
 // Add token to every request if available
@@ -31,7 +31,7 @@ export const userService = {
 
 export const itsmService = {
   getSummary: () => api.get('/report/summary').then(res => res.data),
-  getCustomers: () => api.get('/report/customers').then(res => res.data),
+  getCustomers: (period = '30d') => api.get(`/report/customers?period=${period}`).then(res => res.data),
   getCustomerDetail: (id) => api.get(`/report/customers/${id}`).then(res => res.data),
   getCustomerTickets: (id) => api.get(`/report/customers/${id}/tickets`).then(res => res.data),
   getCustomerPerformance: (id, period = '30d') => api.get(`/report/customers/${id}/performance?period=${period}`).then(res => res.data),

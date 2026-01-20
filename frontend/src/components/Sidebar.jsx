@@ -13,7 +13,7 @@ const Sidebar = () => {
     // Track open submenus
     const [openMenus, setOpenMenus] = useState({
         dashboards: location.pathname.startsWith('/dashboard'),
-        customers: location.pathname.startsWith('/customers'),
+        customers: location.pathname.startsWith('/customers') || location.pathname.startsWith('/engineers'),
         services: location.pathname.startsWith('/services'),
         alarms: location.pathname.startsWith('/alarms'),
         cmdb: location.pathname.startsWith('/cmdb'),
@@ -62,8 +62,8 @@ const Sidebar = () => {
             <button
                 onClick={() => toggleMenu(menuKey)}
                 className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all ${isActive
-                        ? 'bg-primary-50 text-primary-700 font-semibold'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                    ? 'bg-primary-50 text-primary-700 font-semibold'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                     }`}
             >
                 <div className="flex items-center gap-3">
@@ -116,9 +116,10 @@ const Sidebar = () => {
                     title="Customers"
                     icon={<Building2 size={18} />}
                     menuKey="customers"
-                    isActive={location.pathname.startsWith('/customers')}
+                    isActive={location.pathname.startsWith('/customers') || location.pathname.startsWith('/engineers')}
                 >
                     <SubMenuItem to="/customers" label="All Customers" end />
+                    <SubMenuItem to="/engineers" label="Engineers" end />
                     <SubMenuItem to="/customers/services" label="Services" />
                     <SubMenuItem to="/customers/reports" label="Reports" />
                 </MenuGroup>
@@ -182,7 +183,6 @@ const Sidebar = () => {
                     menuKey="people"
                     isActive={location.pathname.startsWith('/people')}
                 >
-                    <SubMenuItem to="/people/engineers" label="Engineers" />
                     <SubMenuItem to="/people/schedule" label="On-duty Schedule" />
                     <SubMenuItem to="/people/skills" label="Skill Matrix" />
                 </MenuGroup>

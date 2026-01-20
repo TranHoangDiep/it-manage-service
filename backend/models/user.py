@@ -13,6 +13,7 @@ class User(db.Model):
     full_name = db.Column(db.String(255), nullable=False)
     phone = db.Column(db.String(20))
     role = db.Column(db.String(20), default='member')  # 'leader' or 'member'
+    engineer_name = db.Column(db.String(255))  # ManageEngine technician name for ticket filtering
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -40,6 +41,7 @@ class User(db.Model):
             "full_name": self.full_name,
             "phone": self.phone,
             "role": self.role,
+            "engineer_name": self.engineer_name,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None

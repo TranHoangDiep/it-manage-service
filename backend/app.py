@@ -196,12 +196,22 @@ def delete_user(user_id):
 # Summary Dashboard
 @app.route('/api/report/summary', methods=['GET'])
 def get_summary():
-    return jsonify(itsm_service.get_summary())
+    # Hardcode engineer filter for now (remove login requirement temporarily)
+    engineer_name = request.args.get('engineer_name', 'Anh. Vo Thi Hong - CTS ITS.MS.2 HCM')
+    return jsonify(itsm_service.get_summary(engineer_name))
 
 # Customer APIs
 @app.route('/api/report/customers', methods=['GET'])
 def get_customers():
-    return jsonify(itsm_service.get_customers())
+    # Get engineer_name from query param (optional)
+    engineer_name = request.args.get('engineer_name')
+    
+    # Get period from query param (1d, 7d, 30d)
+    period = request.args.get('period', '30d')
+    if period not in ['1d', '7d', '30d']:
+        period = '30d'
+    
+    return jsonify(itsm_service.get_customers(engineer_name, period))
 
 @app.route('/api/report/customers/<customer_id>', methods=['GET'])
 def get_customer_detail(customer_id):
@@ -715,4 +725,4 @@ def delete_asset(asset_id):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
