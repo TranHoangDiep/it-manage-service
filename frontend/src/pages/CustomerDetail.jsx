@@ -319,6 +319,41 @@ const CustomerDetail = () => {
                         ))}
                     </div>
                 </div>
+
+                {/* Customer Contacts */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden lg:col-span-3">
+                    <h3 className="font-bold text-xl text-slate-800 mb-6">Customer Contacts</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b-2 border-slate-100">
+                                    <th className="py-3 font-black text-slate-800 uppercase tracking-wider">Name</th>
+                                    <th className="py-3 font-black text-slate-800 uppercase tracking-wider">Roles</th>
+                                    <th className="py-3 font-black text-slate-800 uppercase tracking-wider">Email</th>
+                                    <th className="py-3 font-black text-slate-800 uppercase tracking-wider">Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {data.contacts && data.contacts.length > 0 ? (
+                                    data.contacts.map((contact, i) => (
+                                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-3 font-bold text-slate-700">{contact.name}</td>
+                                            <td className="py-3 text-slate-600">{contact.title || '-'}</td>
+                                            <td className="py-3 text-slate-600 font-mono text-xs">
+                                                {contact.email ? <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">{contact.email}</a> : '-'}
+                                            </td>
+                                            <td className="py-3 text-slate-600 font-mono text-xs">{contact.phone || '-'}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="4" className="py-8 text-center text-slate-400 italic">No contact information available</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             {/* Ticket List Table */}

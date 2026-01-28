@@ -1,13 +1,12 @@
-from flask_sqlalchemy import SQLAlchemy
+from models.ticket import db
 from datetime import datetime
-
-db = SQLAlchemy()
 
 class Member(db.Model):
     __tablename__ = 'members'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     full_name = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(100)) # Job Title / Role
     birth_year = db.Column(db.Integer)
     cccd = db.Column(db.String(20))  # Căn cước công dân
     phone = db.Column(db.String(20))
@@ -20,6 +19,7 @@ class Member(db.Model):
             "id": self.id,
             "email": self.email,
             "full_name": self.full_name,
+            "role": self.role,
             "birth_year": self.birth_year,
             "cccd": self.cccd,
             "phone": self.phone,

@@ -6,10 +6,12 @@ from models.member import Member
 from models.user import User
 from models.modules import Project, ProjectMember, CustomerContact, Contact, AlarmNote, CMDBAsset
 from models.alarm import AlarmNote as AlarmNoteV2, AlarmHistory
+from models.worklog import Worklog
 from routes.alarm_routes import alarm_bp
 from services.itsm_service import ITSMService
 from services.auth_service import create_access_token, login_required, leader_required
 from services.sync_worker import sync_data
+from services.worklog_sync import run_worklog_sync
 from config import Config
 import threading
 
@@ -272,16 +274,19 @@ def trigger_sync():
     threading.Thread(target=sync_data, args=(app,), daemon=True).start()
     return jsonify({"message": "Sync started in background"})
 
+@app.route('/api/report/sync-worklog', methods=['POST'])
+def trigger_worklog_sync():
+    """Trigger incremental worklog sync from SQL Server"""
+    threading.Thread(target=run_worklog_sync, args=(app,), daemon=True).start()
+    return jsonify({"message": "Worklog sync started in background"})
+
 @app.route('/api/report/monitoring', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy", "service": "ITSM Report API (Optimized)"})
 
 # ==================== MEMBER MANAGEMENT APIs ====================
 
-@app.route('/api/members', methods=['GET'])
-def get_all_members():
-    members = Member.query.order_by(Member.created_at.desc()).all()
-    return jsonify([m.to_dict() for m in members])
+
 
 @app.route('/api/members/<int:member_id>', methods=['GET'])
 def get_member(member_id):
@@ -289,6 +294,11 @@ def get_member(member_id):
     if not member:
         return jsonify({"error": "Member not found"}), 404
     return jsonify(member.to_dict())
+
+@app.route('/api/members', methods=['GET'])
+def get_all_members():
+    members = Member.query.order_by(Member.full_name).all()
+    return jsonify([m.to_dict() for m in members])
 
 @app.route('/api/members', methods=['POST'])
 def create_member():
@@ -304,6 +314,7 @@ def create_member():
     member = Member(
         email=data['email'],
         full_name=data['full_name'],
+        role=data.get('role'),
         birth_year=data.get('birth_year'),
         cccd=data.get('cccd'),
         phone=data.get('phone'),
@@ -324,6 +335,8 @@ def update_member(member_id):
         member.email = data['email']
     if data.get('full_name'):
         member.full_name = data['full_name']
+    if 'role' in data:
+        member.role = data['role']
     if 'birth_year' in data:
         member.birth_year = data['birth_year']
     if 'cccd' in data:
@@ -367,6 +380,7 @@ def import_members():
         if existing:
             # Update existing
             existing.full_name = item['full_name']
+            existing.role = item.get('role', existing.role)
             existing.birth_year = item.get('birth_year', existing.birth_year)
             existing.cccd = item.get('cccd', existing.cccd)
             existing.phone = item.get('phone', existing.phone)
@@ -377,6 +391,7 @@ def import_members():
             member = Member(
                 email=item['email'],
                 full_name=item['full_name'],
+                role=item.get('role'),
                 birth_year=item.get('birth_year'),
                 cccd=item.get('cccd'),
                 phone=item.get('phone'),
@@ -413,6 +428,7 @@ def create_project():
     project = Project(
         name=data.get('name'),
         description=data.get('description'),
+        logo=data.get('logo'),
         status=data.get('status', 'Active'),
         start_date=data.get('startDate'),
         lead_name=data.get('lead', {}).get('name'),
@@ -430,7 +446,8 @@ def create_project():
             name=m.get('name'),
             role=m.get('role'),
             phone=m.get('phone'),
-            email=m.get('email')
+            email=m.get('email'),
+            team=m.get('team', 'Other')
         )
         db.session.add(member)
     db.session.commit()
@@ -445,6 +462,7 @@ def update_project(project_id):
     data = request.get_json()
     project.name = data.get('name', project.name)
     project.description = data.get('description', project.description)
+    project.logo = data.get('logo', project.logo)
     project.status = data.get('status', project.status)
     project.start_date = data.get('startDate', project.start_date)
     if 'lead' in data:
@@ -476,7 +494,8 @@ def add_project_member(project_id):
         name=data.get('name'),
         role=data.get('role'),
         phone=data.get('phone'),
-        email=data.get('email')
+        email=data.get('email'),
+        team=data.get('team', 'Other')
     )
     db.session.add(member)
     db.session.commit()

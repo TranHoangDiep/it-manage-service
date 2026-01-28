@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-    LayoutDashboard, Users, HardHat, ShieldCheck, Home, Network, Server,
-    FolderKanban, BookUser, AlertTriangle, Building2, Wrench, UserCircle,
-    ChevronDown, ChevronRight, Phone, BarChart3, Activity, TrendingUp,
-    Clock, Shield, Cloud, Database, Link2, MapPin, RefreshCw, Calendar
+    LayoutDashboard, ShieldCheck, Home,
+    FolderKanban, AlertTriangle, Building2, Wrench, UserCircle,
+    ChevronDown, ChevronRight, Phone, Database
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -18,7 +17,7 @@ const Sidebar = () => {
         alarms: location.pathname.startsWith('/alarms'),
         cmdb: location.pathname.startsWith('/cmdb'),
         projects: location.pathname.startsWith('/projects'),
-        people: location.pathname.startsWith('/people'),
+        people: location.pathname.startsWith('/people') || location.pathname.startsWith('/members'),
         contacts: location.pathname.startsWith('/contacts'),
     });
 
@@ -181,8 +180,9 @@ const Sidebar = () => {
                     title="People"
                     icon={<UserCircle size={18} />}
                     menuKey="people"
-                    isActive={location.pathname.startsWith('/people')}
+                    isActive={location.pathname.startsWith('/people') || location.pathname.startsWith('/members')}
                 >
+                    <SubMenuItem to="/members" label="Members List" />
                     <SubMenuItem to="/people/schedule" label="On-duty Schedule" />
                     <SubMenuItem to="/people/skills" label="Skill Matrix" />
                 </MenuGroup>

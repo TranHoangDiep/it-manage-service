@@ -210,6 +210,11 @@ class ITSMService:
             func.avg(Ticket.resolve_time_hours).label('avg_reso')
         ).filter(Ticket.customer_id == customer_id).group_by(Ticket.engineer_name).all()
         
+        # Try to get customer contact info from CustomerContact table
+        from models.modules import CustomerContact
+        contact_info = CustomerContact.query.filter(CustomerContact.name == cust_name).first()
+        contacts_list = [c.to_dict() for c in contact_info.contacts] if contact_info else []
+
         return {
             "summary": {
                 "name": cust_name,
@@ -229,6 +234,7 @@ class ITSMService:
                 "met": summary.total - summary.breached,
                 "breached": int(summary.breached or 0)
             },
+            "contacts": contacts_list,
             "trend": []
         }
 

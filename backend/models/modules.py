@@ -1,7 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-
-db = SQLAlchemy()
+from models.ticket import db
 
 # ==================== PROJECT MODELS ====================
 
@@ -10,6 +8,7 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
+    logo = db.Column(db.String(500)) # Logo URL or Base64
     status = db.Column(db.String(50), default='Active')  # Active, Planning, Completed
     start_date = db.Column(db.String(20))
     
@@ -29,6 +28,7 @@ class Project(db.Model):
             "id": self.id,
             "name": self.name,
             "description": self.description,
+            "logo": self.logo,
             "status": self.status,
             "startDate": self.start_date,
             "lead": {
@@ -49,6 +49,7 @@ class ProjectMember(db.Model):
     role = db.Column(db.String(100))
     phone = db.Column(db.String(20))
     email = db.Column(db.String(255))
+    team = db.Column(db.String(50)) # System, Network, NOC
 
     def to_dict(self):
         return {
@@ -56,7 +57,8 @@ class ProjectMember(db.Model):
             "name": self.name,
             "role": self.role,
             "phone": self.phone,
-            "email": self.email
+            "email": self.email,
+            "team": self.team or "Other"
         }
 
 
