@@ -7,7 +7,10 @@ from models.user import User
 from models.modules import Project, ProjectMember, CustomerContact, Contact, AlarmNote, CMDBAsset
 from models.alarm import AlarmNote as AlarmNoteV2, AlarmHistory
 from models.worklog import Worklog
+from models.time_spent import TechTimeSpent
 from routes.alarm_routes import alarm_bp
+from routes.report_routes import report_bp
+from routes.time_spent_routes import time_spent_bp
 from services.itsm_service import ITSMService
 from services.auth_service import create_access_token, login_required, leader_required
 from services.sync_worker import sync_data
@@ -21,6 +24,8 @@ CORS(app)
 
 # Register Blueprints
 app.register_blueprint(alarm_bp)
+app.register_blueprint(report_bp)
+app.register_blueprint(time_spent_bp)
 
 # Initialize DB
 db.init_app(app)

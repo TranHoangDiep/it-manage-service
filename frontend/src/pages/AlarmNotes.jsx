@@ -1,65 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { alarmService } from '../services/api';
 import {
     AlertTriangle, Search, Plus, Edit2, Trash2, X, Check, Server,
     Clock, Ticket, FileText, AlertCircle, CheckCircle2
 } from 'lucide-react';
 
-// Initial Alarm Notes Data
-const INITIAL_ALARMS = [
-    {
-        id: "ALM-001",
-        alarmName: "High Disk Usage (>90%)",
-        severity: "Critical",
-        target: "192.168.1.10 (Database Server)",
-        status: "In Progress",
-        ticketId: "INC-2024-005",
-        note: "Đã mở ticket, đang chờ team System mở rộng dung lượng ổ đĩa.",
-        updatedAt: "2026-01-18 10:30"
-    },
-    {
-        id: "ALM-002",
-        alarmName: "High CPU Load (>85%)",
-        severity: "Warning",
-        target: "192.168.1.15 (App Server 01)",
-        status: "Open",
-        ticketId: "",
-        note: "Cần kiểm tra process nào đang chiếm CPU cao",
-        updatedAt: "2026-01-18 09:45"
-    },
-    {
-        id: "ALM-003",
-        alarmName: "Memory Usage Critical",
-        severity: "Critical",
-        target: "192.168.1.20 (Web Server)",
-        status: "Resolved",
-        ticketId: "INC-2024-004",
-        note: "Đã restart service và memory đã ổn định. Cần monitor thêm 24h.",
-        updatedAt: "2026-01-17 23:15"
-    },
-    {
-        id: "ALM-004",
-        alarmName: "Network Latency High",
-        severity: "Warning",
-        target: "10.0.0.1 (Core Switch)",
-        status: "In Progress",
-        ticketId: "INC-2024-006",
-        note: "Đang phân tích traffic, nghi ngờ có DDoS nhẹ từ ngoài.",
-        updatedAt: "2026-01-18 11:00"
-    },
-    {
-        id: "ALM-005",
-        alarmName: "Service Down - MySQL",
-        severity: "Critical",
-        target: "192.168.1.25 (DB Slave)",
-        status: "Open",
-        ticketId: "",
-        note: "",
-        updatedAt: "2026-01-18 11:25"
-    },
-];
-
 const AlarmNotes = () => {
-    const [alarms, setAlarms] = useState(INITIAL_ALARMS);
+    const [alarms, setAlarms] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [showModal, setShowModal] = useState(false);
@@ -68,31 +16,58 @@ const AlarmNotes = () => {
         alarmName: '', severity: 'Warning', target: '', status: 'Open', ticketId: '', note: ''
     });
 
-    const generateId = () => `ALM-${String(alarms.length + 1).padStart(3, '0')}`;
-    const getCurrentTime = () => {
-        const now = new Date();
-        return now.toISOString().slice(0, 16).replace('T', ' ');
+    useEffect(() => {
+        loadAlarms();
+    }, []);
+
+    const loadAlarms = async () => {
+        setLoading(true);
+        try {
+            const data = await alarmService.getAll();
+            setAlarms(data);
+        } catch (error) {
+            console.error('Failed to load alarms:', error);
+        }
+        setLoading(false);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingAlarm) {
-            setAlarms(alarms.map(a => a.id === editingAlarm.id ? { ...formData, id: editingAlarm.id, updatedAt: getCurrentTime() } : a));
-        } else {
-            setAlarms([{ ...formData, id: generateId(), updatedAt: getCurrentTime() }, ...alarms]);
+        try {
+            if (editingAlarm) {
+                const updated = await alarmService.update(editingAlarm.id, formData);
+                setAlarms(alarms.map(a => a.id === updated.id ? updated : a));
+            } else {
+                const created = await alarmService.create(formData);
+                setAlarms([created, ...alarms]);
+            }
+            closeModal();
+        } catch (error) {
+            alert('Failed to save alarm');
         }
-        closeModal();
     };
 
     const handleEdit = (alarm) => {
         setEditingAlarm(alarm);
-        setFormData({ ...alarm });
+        setFormData({
+            alarmName: alarm.alarmName,
+            severity: alarm.severity,
+            target: alarm.target,
+            status: alarm.status,
+            ticketId: alarm.ticketId,
+            note: alarm.note
+        });
         setShowModal(true);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Bạn có chắc muốn xóa alarm note này?')) {
-            setAlarms(alarms.filter(a => a.id !== id));
+            try {
+                await alarmService.delete(id);
+                setAlarms(alarms.filter(a => a.id !== id));
+            } catch (error) {
+                alert('Failed to delete alarm');
+            }
         }
     };
 
@@ -133,9 +108,9 @@ const AlarmNotes = () => {
     };
 
     const filteredAlarms = alarms.filter(alarm => {
-        const matchesSearch = alarm.alarmName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            alarm.target.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            alarm.ticketId.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (alarm.alarmName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (alarm.target || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (alarm.ticketId || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'All' || alarm.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -146,6 +121,14 @@ const AlarmNotes = () => {
         'In Progress': alarms.filter(a => a.status === 'In Progress').length,
         Resolved: alarms.filter(a => a.status === 'Resolved').length,
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -175,8 +158,8 @@ const AlarmNotes = () => {
                         key={status}
                         onClick={() => setStatusFilter(status)}
                         className={`p-4 rounded-2xl border transition-all ${statusFilter === status
-                                ? 'bg-slate-900 text-white border-slate-900 shadow-lg'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                             }`}
                     >
                         <p className={`text-2xl font-black ${statusFilter === status ? 'text-white' : 'text-slate-800'}`}>{count}</p>

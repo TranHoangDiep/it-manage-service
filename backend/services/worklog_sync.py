@@ -30,24 +30,27 @@ class WorklogSyncService:
 
     def _construct_db_url(self):
         """Construct connection string from individual env vars if URL not set"""
-        driver = os.environ.get('ITSM_DB_DRIVER', 'mssql+pyodbc')
-        server = os.environ.get('ITSM_DB_SERVER')
-        database = os.environ.get('ITSM_DB_NAME')
-        user = os.environ.get('ITSM_DB_USER')
-        password = os.environ.get('ITSM_DB_PASSWORD')
+        # Default to MSSQL
+        driver = os.environ.get('SDP_DB_DRIVER', 'mssql+pyodbc')
+        server = os.environ.get('SDP_DB_HOST')  # Changed from ITSM_DB_SERVER
+        database = os.environ.get('SDP_DB_NAME') # Changed from ITSM_DB_NAME
+        user = os.environ.get('SDP_DB_USER')     # Changed from ITSM_DB_USER
+        password = os.environ.get('SDP_DB_PASS') # Changed from ITSM_DB_PASSWORD
+        port = os.environ.get('SDP_DB_PORT', '1433')
         
         if not all([server, database, user, password]):
+            logger.warning("Missing one or more SDP_DB_ variables.")
             return None
             
         # Encode password to handle special characters
         params = urllib.parse.quote_plus(
             f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={server};"
+            f"SERVER={server},{port};"
             f"DATABASE={database};"
             f"UID={user};"
             f"PWD={password}"
         )
-        return f"{driver}/?odbc_connect={params}"
+        return f"{driver}:///?odbc_connect={params}"
 
     def get_last_synced_id(self):
         """Get the ID of the last synced remote worklog from local DB"""
@@ -68,7 +71,7 @@ class WorklogSyncService:
         # Example Query - ADJUST TABLE/COLUMN NAMES BASED ON ACTUAL DB SCHEMA
         # We fetch: id, ticket_id, technician, time_spent, description, updated_at
         query = text("""
-            SELECT 
+            SELECT TOP 100
                 w.worklogid, 
                 w.requestid, 
                 u.first_name + ' ' + u.last_name as technician_name, 
@@ -79,7 +82,6 @@ class WorklogSyncService:
             LEFT JOIN AaaUser u ON w.userid = u.user_id
             WHERE w.worklogid > :last_id
             ORDER BY w.worklogid ASC
-            OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY
         """)
 
         try:

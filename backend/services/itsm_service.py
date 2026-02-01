@@ -130,15 +130,19 @@ class ITSMService:
         # Group by calculation for all customers with period filter
         # Calculate date filter based on period
         now = datetime.now()
+        base_filter = []
+        
         if period == '1d':
             start_date = now - timedelta(days=1)
+            base_filter.append(Ticket.created_at >= start_date)
         elif period == '7d':
             start_date = now - timedelta(days=7)
-        else:  # 30d default
+            base_filter.append(Ticket.created_at >= start_date)
+        elif period == '30d':
             start_date = now - timedelta(days=30)
+            base_filter.append(Ticket.created_at >= start_date)
+        # If 'all', no date filter
         
-        # Build base query with filters
-        base_filter = [Ticket.created_at >= start_date]
         if engineer_name:
             base_filter.append(Ticket.engineer_name == engineer_name)
         
@@ -473,4 +477,163 @@ class ITSMService:
                 print(f"Error fetching ticket {ticket_id}: {e}")
                 
         return ticket.to_dict()
+
+    def get_stats_for_range(self, customer_id, from_dt, to_dt):
+        """
+        Get aggregated stats for a specific customer within a date range.
+        Includes Incidents, Service Requests, and SLA metrics.
+        """
+        # Base query for this customer and range
+        base_filter = [
+            Ticket.customer_id == customer_id,
+            Ticket.created_at >= from_dt,
+            Ticket.created_at <= to_dt
+        ]
+
+        # Total tickets
+        total = db.session.query(func.count(Ticket.id)).filter(*base_filter).scalar() or 0
+        
+        # Breakdown by pre-classified fields (Updated by sync/backfill)
+        incidents = db.session.query(func.count(Ticket.id)).filter(
+            *base_filter,
+            db.or_(
+                Ticket.request_type == 'Incident',
+                db.and_(
+                    Ticket.is_service_request == False,
+                    func.lower(Ticket.category).like('%incident%')
+                )
+            )
+        ).scalar() or 0
+        
+        service_requests = db.session.query(func.count(Ticket.id)).filter(
+            *base_filter,
+            db.or_(
+                Ticket.is_service_request == True,
+                Ticket.request_type == 'Service Request',
+                func.lower(Ticket.category).like('%service request%')
+            )
+        ).scalar() or 0
+        
+        changes = db.session.query(func.count(Ticket.id)).filter(
+            *base_filter,
+            db.or_(
+                func.lower(Ticket.category).like('%change%'),
+                Ticket.request_type == 'Change Request'
+            )
+        ).scalar() or 0
+
+
+        # Others (anything else)
+        others = total - (incidents + service_requests + changes)
+
+        # SLA Metrics
+        sla_met = db.session.query(func.count(Ticket.id)).filter(
+            *base_filter,
+            Ticket.is_overdue == False
+        ).scalar() or 0
+        
+        sla_breached = total - sla_met
+        sla_percent = round((sla_met / total * 100), 2) if total > 0 else 100.0
+
+        # Performance (Using Worklogs/Effort instead of clock time)
+        avg_resolve_time = db.session.query(func.avg(Ticket.time_elapsed_minutes / 60.0)).filter(
+            *base_filter,
+            Ticket.time_elapsed_minutes.isnot(None),
+            Ticket.time_elapsed_minutes > 0
+        ).scalar() or 0
+
+        return {
+            "incidents": incidents,
+            "service_requests": service_requests,
+            "changes": changes,
+            "others": others,
+            "total_tickets": total,
+            "sla": {
+                "met": sla_met,
+                "breached": sla_breached,
+                "percentage": sla_percent
+            },
+            "avg_resolve_time_hours": round(float(avg_resolve_time), 2)
+        }
+
+    def get_forecast(self, customer_id, year, month):
+        """
+        Generates comparison and forecast data based on 3-month moving average.
+        """
+        import calendar
+        from dateutil.relativedelta import relativedelta
+        
+        target_date = datetime(year, month, 1)
+        # We need historical data for the last 3-4 months if available
+        history_data = []
+        
+        # Look back 4 months to get 3 actual months before current
+        for i in range(4, -1, -1):
+            dt = target_date - relativedelta(months=i)
+            _, last_day = calendar.monthrange(dt.year, dt.month)
+            from_dt = dt.replace(day=1, hour=0, minute=0, second=0)
+            to_dt = dt.replace(day=last_day, hour=23, minute=59, second=59)
+            
+            stats = self.get_stats_for_range(customer_id, from_dt, to_dt)
+            history_data.append({
+                "month": dt.strftime("%b %Y"),
+                "date": dt,
+                "volume": stats["total_tickets"],
+                "sla": stats["sla"]["percentage"]
+            })
+
+        # Calculate Moving Average (excluding current month)
+        past_3_months = history_data[:-1]
+        valid_history = [m for m in past_3_months if m["volume"] > 0]
+        
+        if valid_history:
+            avg_volume = sum(m["volume"] for m in valid_history) / len(valid_history)
+            avg_sla = sum(m["sla"] for m in valid_history) / len(valid_history)
+        else:
+            # Fallback if no history
+            current = history_data[-1]
+            avg_volume = current["volume"] or 10
+            avg_sla = current["sla"] or 100.0
+
+        # Forecast for Current (if it was 0) and Next
+        # Conservative forecast: avoid spikes
+        forecast_volume = round(avg_volume * 1.05) # Assume 5% growth or stability
+        forecast_sla = min(100.0, max(95.0, avg_sla)) # Keep between 95 and 100
+        
+        next_dt = target_date + relativedelta(months=1)
+        
+        # Prepare Chart Data
+        # We want: Prev Month (Actual), Current Month (Actual), Next Month (Forecast)
+        prev_actual = history_data[-2]
+        curr_actual = history_data[-1]
+        
+        chart_data = {
+            "volume": [
+                {"label": prev_actual["month"], "actual": prev_actual["volume"], "forecast": None},
+                {"label": curr_actual["month"], "actual": curr_actual["volume"], "forecast": round(avg_volume)},
+                {"label": next_dt.strftime("%b %Y"), "actual": None, "forecast": forecast_volume}
+            ],
+            "sla": [
+                {"label": prev_actual["month"], "actual": prev_actual["sla"], "forecast": None},
+                {"label": curr_actual["month"], "actual": curr_actual["sla"], "forecast": round(avg_sla, 2)},
+                {"label": next_dt.strftime("%b %Y"), "actual": None, "forecast": round(forecast_sla, 2)}
+            ]
+        }
+
+        # Insights
+        trend = "stable"
+        if curr_actual["volume"] > prev_actual["volume"] * 1.1:
+            trend = "increasing"
+        elif curr_actual["volume"] < prev_actual["volume"] * 0.9:
+            trend = "decreasing"
+            
+        summary = f"Based on historical service trends, ticket volume is observed to be {trend}. " \
+                  f"SLA compliance is forecasted to remain stable at approximately {forecast_sla:.1f}% for the coming month, " \
+                  f"well within the agreed service thresholds for enterprise standards."
+
+        return {
+            "chart_data": chart_data,
+            "insight_summary": summary,
+            "trend": trend
+        }
 

@@ -185,6 +185,7 @@ const Sidebar = () => {
                     <SubMenuItem to="/members" label="Members List" />
                     <SubMenuItem to="/people/schedule" label="On-duty Schedule" />
                     <SubMenuItem to="/people/skills" label="Skill Matrix" />
+                    <SubMenuItem to="/people/time-spent" label="Time Spent" />
                 </MenuGroup>
 
                 {/* Contacts */}

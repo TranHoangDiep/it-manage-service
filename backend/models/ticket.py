@@ -14,6 +14,8 @@ class Ticket(db.Model):
     status = db.Column(db.String(100), index=True)
     priority = db.Column(db.String(100), index=True)
     category = db.Column(db.String(100), index=True)
+    request_type = db.Column(db.String(100), index=True)
+    is_service_request = db.Column(db.Boolean, default=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     response_time_minutes = db.Column(db.Integer)
@@ -41,6 +43,7 @@ class Ticket(db.Model):
             "status": self.status,
             "priority": self.priority,
             "category": self.category,
+            "request_type": self.request_type,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "response_time_minutes": self.response_time_minutes,
             "resolve_time_hours": self.resolve_time_hours,

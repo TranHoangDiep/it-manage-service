@@ -17,6 +17,8 @@ import Projects from './pages/Projects';
 import AlarmNotes from './pages/AlarmNotes';
 import CMDB from './pages/CMDB';
 import Network from './pages/Network';
+import CustomerReports from './pages/CustomerReports';
+import TimeSpent from './pages/TimeSpent';
 
 // Placeholder component for pages not yet implemented
 const PlaceholderPage = ({ title, description, color = "violet" }) => (
@@ -66,7 +68,7 @@ function App() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/customers/services" element={<PlaceholderPage title="Customer Services" description="Services subscribed by customers" color="cyan" />} />
-          <Route path="/customers/reports" element={<PlaceholderPage title="Customer Reports" description="Monthly and SLA reports per customer" color="pink" />} />
+          <Route path="/customers/reports" element={<CustomerReports />} />
 
           {/* Services */}
           <Route path="/services/monitoring" element={<PlaceholderPage title="Monitoring Services" description="Prometheus, Grafana, and alerting services" color="violet" />} />
@@ -97,6 +99,7 @@ function App() {
           <Route path="/people/engineers/:id" element={<EngineerDetail />} />
           <Route path="/people/schedule" element={<PlaceholderPage title="On-duty Schedule" description="Engineer shift schedules and rotations" color="blue" />} />
           <Route path="/people/skills" element={<PlaceholderPage title="Skill Matrix" description="Engineer skills and certifications" color="violet" />} />
+          <Route path="/people/time-spent" element={<TimeSpent />} />
 
           {/* Contacts */}
           <Route path="/contacts/customers" element={<CustomerContacts />} />

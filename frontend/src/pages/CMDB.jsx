@@ -1,110 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { cmdbService } from '../services/api';
 import {
     Server, Database, Monitor, Plus, Search, Edit2, Trash2, X, Check,
     Cpu, HardDrive, User, Phone, AlertCircle
 } from 'lucide-react';
-
-// Initial CMDB Assets Data
-const INITIAL_ASSETS = [
-    {
-        id: "VC-001",
-        type: "vCenter",
-        name: "vCenter-DC01",
-        ip: "10.0.1.10",
-        os: "VMware vCenter 7.0",
-        cluster: "DC01-Cluster",
-        status: "Running",
-        cpu: "8 vCPU",
-        ram: "32 GB",
-        adminName: "Nguyễn Văn An",
-        adminPhone: "0912 345 678",
-        note: "Primary vCenter for Production"
-    },
-    {
-        id: "HOST-001",
-        type: "Host",
-        name: "ESXi-Host-01",
-        ip: "10.0.1.21",
-        os: "VMware ESXi 7.0",
-        cluster: "DC01-Cluster",
-        status: "Running",
-        cpu: "64 Cores",
-        ram: "512 GB",
-        adminName: "Trần Văn Bình",
-        adminPhone: "0987 654 321",
-        note: "Production Host - Critical"
-    },
-    {
-        id: "HOST-002",
-        type: "Host",
-        name: "ESXi-Host-02",
-        ip: "10.0.1.22",
-        os: "VMware ESXi 7.0",
-        cluster: "DC01-Cluster",
-        status: "Running",
-        cpu: "64 Cores",
-        ram: "512 GB",
-        adminName: "Trần Văn Bình",
-        adminPhone: "0987 654 321",
-        note: "Production Host - Backup"
-    },
-    {
-        id: "VM-001",
-        type: "VM",
-        name: "DB-Server-01",
-        ip: "192.168.1.10",
-        os: "Ubuntu 22.04 LTS",
-        cluster: "DC01-Cluster",
-        status: "Running",
-        cpu: "16 vCPU",
-        ram: "64 GB",
-        adminName: "Lê Hoàng Cường",
-        adminPhone: "0903 111 222",
-        note: "MySQL Primary Database"
-    },
-    {
-        id: "VM-002",
-        type: "VM",
-        name: "App-Server-01",
-        ip: "192.168.1.15",
-        os: "CentOS 8",
-        cluster: "DC01-Cluster",
-        status: "Running",
-        cpu: "8 vCPU",
-        ram: "32 GB",
-        adminName: "Phạm Minh Dũng",
-        adminPhone: "0918 333 444",
-        note: "Backend Application Server"
-    },
-    {
-        id: "VM-003",
-        type: "VM",
-        name: "Web-Server-01",
-        ip: "192.168.1.20",
-        os: "Ubuntu 20.04 LTS",
-        cluster: "DC01-Cluster",
-        status: "Maintenance",
-        cpu: "4 vCPU",
-        ram: "16 GB",
-        adminName: "Hoàng Thị Em",
-        adminPhone: "0909 555 666",
-        note: "Nginx Web Server - Đang upgrade"
-    },
-    {
-        id: "VM-004",
-        type: "VM",
-        name: "Monitoring-01",
-        ip: "192.168.1.30",
-        os: "Ubuntu 22.04 LTS",
-        cluster: "DC01-Cluster",
-        status: "Running",
-        cpu: "4 vCPU",
-        ram: "8 GB",
-        adminName: "Võ Thanh Hải",
-        adminPhone: "0935 777 888",
-        note: "Prometheus + Grafana Stack"
-    },
-];
 
 const OS_OPTIONS = [
     "Ubuntu 22.04 LTS",
@@ -122,7 +21,8 @@ const OS_OPTIONS = [
 ];
 
 const CMDB = () => {
-    const [assets, setAssets] = useState(INITIAL_ASSETS);
+    const [assets, setAssets] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState('All');
     const [showModal, setShowModal] = useState(false);
@@ -133,10 +33,19 @@ const CMDB = () => {
         status: 'Running', cpu: '', ram: '', adminName: '', adminPhone: '', note: ''
     });
 
-    const generateId = (type) => {
-        const prefix = type === 'vCenter' ? 'VC' : type === 'Host' ? 'HOST' : 'VM';
-        const count = assets.filter(a => a.type === type).length + 1;
-        return `${prefix}-${String(count).padStart(3, '0')}`;
+    useEffect(() => {
+        loadAssets();
+    }, []);
+
+    const loadAssets = async () => {
+        setLoading(true);
+        try {
+            const data = await cmdbService.getAll();
+            setAssets(data);
+        } catch (error) {
+            console.error('Failed to load assets:', error);
+        }
+        setLoading(false);
     };
 
     const validateIP = (ip) => {
@@ -156,28 +65,51 @@ const CMDB = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) return;
 
-        if (editingAsset) {
-            setAssets(assets.map(a => a.id === editingAsset.id ? { ...formData, id: editingAsset.id } : a));
-        } else {
-            setAssets([{ ...formData, id: generateId(formData.type) }, ...assets]);
+        try {
+            if (editingAsset) {
+                const updated = await cmdbService.update(editingAsset.id, formData);
+                setAssets(assets.map(a => a.id === updated.id ? updated : a));
+            } else {
+                const created = await cmdbService.create(formData);
+                setAssets([created, ...assets]);
+            }
+            closeModal();
+        } catch (error) {
+            alert('Failed to save asset');
         }
-        closeModal();
     };
 
     const handleEdit = (asset) => {
         setEditingAsset(asset);
-        setFormData({ ...asset });
+        setFormData({
+            type: asset.type,
+            name: asset.name,
+            ip: asset.ip,
+            os: asset.os,
+            cluster: asset.cluster,
+            status: asset.status,
+            cpu: asset.cpu,
+            ram: asset.ram,
+            adminName: asset.adminName,
+            adminPhone: asset.adminPhone,
+            note: asset.note
+        });
         setErrors({});
         setShowModal(true);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Bạn có chắc muốn xóa asset này khỏi CMDB?')) {
-            setAssets(assets.filter(a => a.id !== id));
+            try {
+                await cmdbService.delete(id);
+                setAssets(assets.filter(a => a.id !== id));
+            } catch (error) {
+                alert('Failed to delete asset');
+            }
         }
     };
 

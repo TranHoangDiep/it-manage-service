@@ -40,6 +40,12 @@ export const itsmService = {
   getEngineerTickets: (id) => api.get(`/report/engineers/${id}/tickets`).then(res => res.data),
   getEngineerPerformance: (id, period = '30d') => api.get(`/report/engineers/${id}/performance?period=${period}`).then(res => res.data),
   getTicketDetail: (id) => api.get(`/report/tickets/${id}`).then(res => res.data),
+  getMonthlyReport: (customerId, year, month) => api.get(`/v1/reports/itsm/monthly`, {
+    params: { customer_id: customerId, year, month }
+  }).then(res => res.data),
+  getForecast: (customerId, year, month) => api.get(`/v1/reports/itsm/forecast`, {
+    params: { customer_id: customerId, year, month }
+  }).then(res => res.data),
 };
 
 export const memberService = {
